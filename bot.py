@@ -19,6 +19,7 @@ class State(Enum):
     AGREEMENT = 2
     OAUTH = 3
     DONE = 4
+    UNKNOWN = 5
 
 
 STATES = {}
@@ -137,6 +138,8 @@ async def message_handler(event):
 @client.on(events.CallbackQuery())
 async def answer_callback_query(event):
     global STATES
+    if event.sender_id not in STATES.keys():
+        STATES[event.sender_id] = State.FIRST_START
     data = event.data.decode()
     if data == 'donate':
         await donate_handler(event)
