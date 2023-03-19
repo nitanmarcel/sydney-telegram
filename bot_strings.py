@@ -14,7 +14,7 @@ By using our Chat-GPT-4 powered Telegram bot, you agree to the following:
 """
 
 DONATION_STRING = """
-Please note that I am not affiliated with the API provider, and this the project has been born out. If you find my tool useful and would like to support its development, please consider making a donation. 
+Please note that I am not affiliated with the API provider. If you find my tool useful and would like to support its development, please consider making a donation. 
 Your contributions will help me continue to improve and maintain the tool. Thank you!
 
 - PayPal: paypal.me/marcelalexandrunitan
