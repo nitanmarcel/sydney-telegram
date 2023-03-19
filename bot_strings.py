@@ -56,3 +56,7 @@ NOT_IN_WHITELST_STRING = """
 TIMEOUT_ERROR_STRING = """
 ⚠️ Request ended with timeout error. Try again later!
 """
+
+PROCESSING_ERROR_STRING = """
+⚠️ There was an error processing your response! Try with another question!
+"""

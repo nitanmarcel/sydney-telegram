@@ -102,6 +102,9 @@ async def message_handler(event):
         async with client.action(event.chat_id, 'typing'):
             try:
                 message, cards = await bot_chat.send_message(event.sender_id, message, cookies)
+                if not message:
+                    await event.reply(bot_strings.PROCESSING_ERROR_STRING)
+                    return
                 message = await parse_footnotes(message)
                 buttons = [Button.url(card[0], card[1]) for card in cards]
                 buttons = [[buttons[i], buttons[i+1]] if i+1 <
