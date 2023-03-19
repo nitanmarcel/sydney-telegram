@@ -99,15 +99,16 @@ async def message_handler(event):
         await start_handler(event)
         return
     if cookies:
-        try:
-            message, cards = await bot_chat.send_message(event.sender_id, message, cookies)
-            message = await parse_footnotes(message)
-            buttons = [Button.url(card[0], card[1]) for card in cards]
-            buttons = [[buttons[i], buttons[i+1]] if i+1 <
-                    len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
-            await event.reply(message, buttons=buttons or None)
-        except asyncio.TimeoutError:
-            await event.reply(bot_strings.TIMEOUT_ERROR_STRING)
+        async with client.action(event.chat_id, 'typing'):
+            try:
+                message, cards = await bot_chat.send_message(event.sender_id, message, cookies)
+                message = await parse_footnotes(message)
+                buttons = [Button.url(card[0], card[1]) for card in cards]
+                buttons = [[buttons[i], buttons[i+1]] if i+1 <
+                        len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
+                await event.reply(message, buttons=buttons or None)
+            except asyncio.TimeoutError:
+                await event.reply(bot_strings.TIMEOUT_ERROR_STRING)
         return
     state = STATES[event.sender_id]
     if state == State.FIRST_START:
