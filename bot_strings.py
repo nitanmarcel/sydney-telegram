@@ -52,3 +52,7 @@ Authentification completed!
 NOT_IN_WHITELST_STRING = """
 ⚠️ You don\'t have access to this service! Make sure you're accepted into the whitelist in the mobile application
 """
+
+TIMEOUT_ERROR_STRING = """
+⚠️ Request ended with timeout error. Try again later!
+"""
