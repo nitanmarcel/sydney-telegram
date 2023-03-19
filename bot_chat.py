@@ -105,7 +105,7 @@ async def send_message(userID, message, cookies):
                             numUserMessagesInConversation = js['item']['throttling']['numUserMessagesInConversation']
                             messages = js['item']['messages']
                             for message in messages:
-                                if message['author'] == 'bot' and 'messageType' not in message.keys():
+                                if message['author'] == 'bot' and 'messageType' not in message.keys() and 'text' in message.keys():
                                     answer = message['text']
                                     for _card in message['adaptiveCards']:
                                         if _card['type'] == 'AdaptiveCard':
@@ -119,7 +119,7 @@ async def send_message(userID, message, cookies):
                                 del MESSAGE_CREDS[userID]
                 if answer:
                     break
-        return answer or response, cards
+        return answer, cards
 
 
 async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, **kwargs):
