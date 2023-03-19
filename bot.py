@@ -41,12 +41,16 @@ async def parse_footnotes(text):
 
 async def start_handler(event):
     if STATES[event.sender_id] == State.DONE:
-        buttons = [Button.inline(text='Donate', data='donate'),
-                   Button.inline(text='Logout', data='logout')]
+        buttons = [
+            [Button.inline(text='Donate', data='donate'),
+                   Button.inline(text='Logout', data='logout')],
+                   [Button.inline(text='Source Code', data='donate')],
+                   ]
     else:
         buttons = [
             [Button.inline(text='Continue', data='continue'),
-             Button.inline(text='Donate', data='donate')]
+             Button.inline(text='Donate', data='donate')],
+            [Button.inline(text='Source Code', data='donate')],
         ]
     if hasattr(event, 'out') and event.out:
         await event.edit(bot_strings.FIRST_START_STRING, buttons=buttons)
@@ -74,8 +78,9 @@ async def logout_handler(event):
 
 async def donate_handler(event):
     back_button = Button.inline(text='Back', data='back')
+    source_button = Button.url(text='Source Code', url='https://github.com/nitanmarcel/sydney-telegram')
     await event.edit(bot_strings.DONATION_STRING,
-                     buttons=[[back_button]], link_preview=False)
+                     buttons=[[back_button, source_button]], link_preview=False)
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True))
