@@ -107,13 +107,14 @@ async def send_message(userID, message, cookies):
                             for message in messages:
                                 if message['author'] == 'bot' and 'messageType' not in message.keys() and 'text' in message.keys():
                                     answer = message['text']
-                                    for _card in message['adaptiveCards']:
-                                        if _card['type'] == 'AdaptiveCard':
-                                            card = _card['body'][-1]['text']
-                                            markdown_pattern = re.findall(
-                                                r'\[(.*?)\]\((.*?)\)', card)
-                                            cards.extend(
-                                                iter(markdown_pattern))
+                                    if 'adaptiveCards' in message.keys():
+                                        for _card in message['adaptiveCards']:
+                                            if _card['type'] == 'AdaptiveCard':
+                                                card = _card['body'][-1]['text']
+                                                markdown_pattern = re.findall(
+                                                    r'\[(.*?)\]\((.*?)\)', card)
+                                                cards.extend(
+                                                    iter(markdown_pattern))
                                     break
                             if numUserMessagesInConversation >= (maxNumUserMessagesInConversation - 1) and userID in MESSAGE_CREDS:
                                 del MESSAGE_CREDS[userID]
