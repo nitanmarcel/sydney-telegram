@@ -197,24 +197,10 @@ async def answer_inline_query(event):
 async def test(event):
     cookies = await bot_db.get_user(event.user_id)
     message, buttons = await answer_builder(event.user_id, event.query, cookies)
-    message, formatting_entities = await client._parse_message_text(message, 'markdown')
     if buttons:
-        await client(EditInlineBotMessageRequest(
-            id=event.msg_id,
-            message=message,
-            no_webpage=True,
-            media=None,
-            reply_markup=client.build_reply_markup(buttons),
-            entities=formatting_entities
-        ))
+        await client.edit_message(event.msg_id, text=message, buttons=buttons)
     else:
-        await client(EditInlineBotMessageRequest(
-            id=event.msg_id,
-            message=message,
-            no_webpage=True,
-            media=None,
-            entities=formatting_entities
-        ))
+        await client.edit_message(event.msg_id, text=message)
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: not e.is_private))
