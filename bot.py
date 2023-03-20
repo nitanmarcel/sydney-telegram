@@ -6,6 +6,10 @@ from enum import Enum
 from urllib.parse import parse_qs, urlparse
 
 from telethon import TelegramClient, events
+from telethon.tl.functions.messages import EditInlineBotMessageRequest
+from telethon.tl.types import UpdateBotInlineSend
+from telethon.tl.types import InputBotInlineMessageID
+from telethon.utils import resolve_inline_message_id
 from telethon.tl.custom import Button
 
 import bot_chat
@@ -46,9 +50,9 @@ async def start_handler(event):
     if STATES[event.sender_id] == State.DONE:
         buttons = [
             [Button.inline(text='Donate', data='donate'),
-                   Button.inline(text='Logout', data='logout')],
-                   [Button.inline(text='Source Code', data='donate')],
-                   ]
+             Button.inline(text='Logout', data='logout')],
+            [Button.inline(text='Source Code', data='donate')],
+        ]
     else:
         buttons = [
             [Button.inline(text='Continue', data='continue'),
@@ -81,9 +85,11 @@ async def logout_handler(event):
 
 async def donate_handler(event):
     back_button = Button.inline(text='Back', data='back')
-    source_button = Button.url(text='Source Code', url='https://github.com/nitanmarcel/sydney-telegram')
+    source_button = Button.url(
+        text='Source Code', url='https://github.com/nitanmarcel/sydney-telegram')
     await event.edit(bot_strings.DONATION_STRING,
                      buttons=[[back_button, source_button]], link_preview=False)
+
 
 async def answer_builder(userId, query, cookies):
     message, buttons = None, None
@@ -95,7 +101,7 @@ async def answer_builder(userId, query, cookies):
             message = await parse_footnotes(message)
             buttons = [Button.url(card[0], card[1]) for card in cards]
             buttons = [[buttons[i], buttons[i+1]] if i+1 <
-                        len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
+                       len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
     except asyncio.TimeoutError:
         message = bot_strings.TIMEOUT_ERROR_STRING
     return message, buttons
@@ -171,28 +177,53 @@ async def answer_callback_query(event):
     if data == 'logout':
         await logout_handler(event)
         STATES[event.sender_id] = State.FIRST_START
+    await event.answer()
 
 
 @client.on(events.InlineQuery())
 async def answer_inline_query(event):
-    if event.text and event.text[-1] in ['.', '!', '?']:
-        builder = event.builder
-        cookies = await bot_db.get_user(event.sender_id)
-        message, buttons = await answer_builder(event.sender_id, event.text, cookies)
-        if not cookies:
-            await event.answer(switch_pm=f'⚠️ {message}', switch_pm_param='start')
-            return
-        if buttons:
-            await event.answer([builder.article(message, text=message, buttons=buttons)])
-        else:
-            await event.answer([builder.article(message, text=message)])
+    message = event.text
+    if not message:
+        return
+    builder = event.builder
+    cookies = await bot_db.get_user(event.sender_id)
+    if not cookies:
+        await event.answer(switch_pm=bot_strings.INLINE_NO_COOKIE_STRING, switch_pm_param='start')
+        return
+    await event.answer([builder.article('Click me', text=bot_strings.INLINE_PROCESSING_STRING, buttons=[Button.inline('Please wait...')])])
+
+
+@client.on(events.Raw(UpdateBotInlineSend))
+async def test(event):
+    cookies = await bot_db.get_user(event.user_id)
+    message, buttons = await answer_builder(event.user_id, event.query, cookies)
+    message, formatting_entities = await client._parse_message_text(message, 'markdown')
+    if buttons:
+        await client(EditInlineBotMessageRequest(
+            id=event.msg_id,
+            message=message,
+            no_webpage=True,
+            media=None,
+            reply_markup=client.build_reply_markup(buttons),
+            entities=formatting_entities
+        ))
+    else:
+        await client(EditInlineBotMessageRequest(
+            id=event.msg_id,
+            message=message,
+            no_webpage=True,
+            media=None,
+            entities=formatting_entities
+        ))
+
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: not e.is_private))
 async def message_handler_groups(event):
     if not event.mentioned or not event.text:
         return
     cookies = await bot_db.get_user(event.sender_id)
-    message = event.text.replace(f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
+    message = event.text.replace(
+        f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
     message, buttons = await answer_builder(event.sender_id, message, cookies)
     if not cookies:
         await event.reply(f'⚠️ {message}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
