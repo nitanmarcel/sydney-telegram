@@ -6,10 +6,8 @@ from enum import Enum
 from urllib.parse import parse_qs, urlparse
 
 from telethon import TelegramClient, events
-from telethon.tl.functions.messages import EditInlineBotMessageRequest
+from telethon.tl.types import UpdateBotStopped
 from telethon.tl.types import UpdateBotInlineSend
-from telethon.tl.types import InputBotInlineMessageID
-from telethon.utils import resolve_inline_message_id
 from telethon.tl.custom import Button
 
 import bot_chat
@@ -149,9 +147,10 @@ async def message_handler_private(event):
             await event.reply(bot_strings.AUTHENTIFICATION_FAILED_STRING)
             STATES[event.sender_id] = State.FIRST_START
             return
-        await event.reply(bot_strings.AUTHENTIFICATION_DONE_STRING.format(bot_config.TELEGRAM_BOT_USERNAME))
+        await event.reply(bot_strings.AUTHENTIFICATION_DONE_STRING.format(bot_config.TELEGRAM_BOT_USERNAME),
+                          buttons=[Button.inline('Stay logged in', 'keepcookies')])
         STATES[event.sender_id] = State.DONE
-        await bot_db.insert_user(event.sender_id, cookies)
+        await bot_db.insert_user(event.sender_id, cookies, keep_cookies=False)
 
 
 @client.on(events.CallbackQuery())
@@ -177,6 +176,11 @@ async def answer_callback_query(event):
     if data == 'logout':
         await logout_handler(event)
         STATES[event.sender_id] = State.FIRST_START
+    if data == 'keepcookies':
+        save = await bot_db.insert_user(event.sender_id, cookies=None, keep_cookies=True)
+        if save:
+            message = await event.get_message()
+            await event.edit(message.text)
     await event.answer()
 
 
@@ -194,13 +198,21 @@ async def answer_inline_query(event):
 
 
 @client.on(events.Raw(UpdateBotInlineSend))
-async def test(event):
+async def handle_inline_send(event):
     cookies = await bot_db.get_user(event.user_id)
     message, buttons = await answer_builder(event.user_id, event.query, cookies)
     if buttons:
         await client.edit_message(event.msg_id, text=message, buttons=buttons)
     else:
         await client.edit_message(event.msg_id, text=message)
+
+@client.on(events.Raw(UpdateBotStopped))
+async def handle_bot_stopped(event):
+    if event.stopped:
+        cookies = await bot_db.get_user(event.user_id)
+        if cookies:
+            await bot_db.remove_user(event.user_id)
+    
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: not e.is_private))
