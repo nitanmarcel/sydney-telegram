@@ -45,12 +45,16 @@ AUTHENTIFICATION_FAILED_STRING = """
 ⚠️ Authentification failed!
 """
 
-# - Inline mode: To use inline mode, simply mention my name in any chat and type your question, ending with a question mark, exclamation mark or period. For example, "@{} What is the capital of France?" I'll respond to your question right away!
 AUTHENTIFICATION_DONE_STRING = """
 Authentification completed!
 
 Here, you can ask me anything you want!
-To use me in groups, mention me or reply to one of my messages in a group chat. Remember that you'll need to be authenticated to use this mode. Once you're authenticated, you can ask me anything you want and I'll do my best to answer your question.
+
+There are also two other modes you can use to ask me questions:
+
+- Inline mode: To use inline mode, simply mention my name in any chat and type your question, ending with a question mark, exclamation mark or period. For example, "@{} What is the capital of France?" I'll respond to your question right away!
+
+- Group mode: To use group mode, mention me or reply to one of my messages in a group chat. Remember that you'll need to be authenticated to use this mode. Once you're authenticated, you can ask me anything you want and I'll do my best to answer your question.
 
 """
 
