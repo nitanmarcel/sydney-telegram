@@ -55,7 +55,6 @@ USERS = {}
 async def init(dbstring, encryption_key):
     global ENCRYPTION_KEY
     global USERS, ENCRYPTION_KEY
-
     if not encryption_key:
         ENCRYPTION_KEY = generate_key()
     else:
@@ -73,15 +72,22 @@ async def get_user(userID):
     return USERS[userID] if userID in USERS.keys() else None
 
 
-async def insert_user(userID, cookies):
+async def insert_user(userID, cookies=None, keep_cookies=False):
     global USERS
-    USERS[userID] = cookies
-    return await User.create(id=userID, cookies=cookies_save(cookies))
+    if cookies:
+        USERS[userID] = cookies
+    if userID not in USERS.keys():
+        return None
+    if keep_cookies and userID:
+        return await User.create(id=userID, cookies=cookies_save(USERS[userID]))
+    return USERS[userID]
 
 
 async def remove_user(userID):
     global USERS
     if userID in USERS.keys():
         del USERS[userID]
-        return await User.delete.where(User.id == userID).gino.status()
+        user = await User.get(userID)
+        if user:
+            return await User.delete.where(User.id == userID).gino.status()
     return False

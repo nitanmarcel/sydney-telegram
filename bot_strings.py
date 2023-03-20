@@ -35,8 +35,9 @@ To complete the OAuth process, please follow these steps:
 
 Once I receive the URL, I'll use it to complete the OAuth process.
 
-We do not store any of your content or session information with the exception of what is necessary to provide you the service.
-You can always log out by running the /start command and clicking on the Logout button.
+We do not store any of your content or session information with the exception of what is necessary to provide you the service, and only with your consent.
+
+You can always log out by running the /start command and clicking on the Logout button or stopping the bot.
 """
 
 AUTHENTIFICATION_URL_NOT_VALID_STRING = """
