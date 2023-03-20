@@ -35,6 +35,7 @@ logging.basicConfig(level=logging.INFO)
 client = TelegramClient('sydney', bot_config.TELEGRAM_CLIENT_ID,
                         bot_config.TELEGRAM_CLIENT_HASH, catch_up=True)
 
+
 async def parse_footnotes(text):
     pattern = r"\[\^(\d+)\^\]"
     superscript_table = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
@@ -193,36 +194,27 @@ async def answer_inline_query(event):
 
 
 @client.on(events.Raw(UpdateBotInlineSend))
-async def answer_inline_send(event):
+async def test(event):
     cookies = await bot_db.get_user(event.user_id)
     message, buttons = await answer_builder(event.user_id, event.query, cookies)
     message, formatting_entities = await client._parse_message_text(message, 'markdown')
     if buttons:
-        request = EditInlineBotMessageRequest(
+        await client(EditInlineBotMessageRequest(
             id=event.msg_id,
             message=message,
             no_webpage=True,
             media=None,
             reply_markup=client.build_reply_markup(buttons),
             entities=formatting_entities
-        )
+        ))
     else:
-        request = EditInlineBotMessageRequest(
+        await client(EditInlineBotMessageRequest(
             id=event.msg_id,
             message=message,
             no_webpage=True,
             media=None,
             entities=formatting_entities
-        )
-    exported = client.session.dc_id != event.msg_id.dc_id
-    if exported:
-        try:
-            sender = await client._borrow_exported_sender(event.msg_id.dc_id)
-        finally:
-            await client._return_exported_sender(sender)
-            await client._call(sender, request)
-    else:
-        await client(request)
+        ))
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: not e.is_private))
