@@ -218,9 +218,9 @@ async def answer_inline_send(event):
     if exported:
         try:
             sender = await client._borrow_exported_sender(event.msg_id.dc_id)
+            await client._call(sender, request)
         finally:
             await client._return_exported_sender(sender)
-            await client._call(sender, request)
     else:
         await client(request)
 
