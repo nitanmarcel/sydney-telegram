@@ -69,3 +69,11 @@ TIMEOUT_ERROR_STRING = """
 PROCESSING_ERROR_STRING = """
 ⚠️ There was an error processing your response! Try with another question!
 """
+
+INLINE_NO_COOKIE_STRING = """
+⚠️ Sorry, you need to login first to access this service.
+"""
+
+INLINE_PROCESSING_STRING = """
+⚠️ Processing your query...
+"""
