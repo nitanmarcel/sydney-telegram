@@ -8,7 +8,6 @@ from datetime import datetime
 import aiohttp
 import websockets
 
-CLIENTS = {}
 MESSAGE_CREDS = {}
 
 URL = 'wss://sydney.bing.com/sydney/ChatHub'
@@ -22,6 +21,9 @@ def read_until_separator(message):
         out += x
     return out
 
+async def clear_session(userID):
+    if userID in MESSAGE_CREDS.keys():
+        del MESSAGE_CREDS[userID]
 
 async def create_session(cookies):
     chat_session = {}

@@ -78,6 +78,7 @@ async def oauth_handler(event):
 
 async def logout_handler(event):
     await bot_db.remove_user(event.sender_id)
+    await bot_chat.clear_session(event.sender_id)
     await event.edit("Logged out!")
 
 
@@ -212,6 +213,7 @@ async def handle_bot_stopped(event):
         cookies = await bot_db.get_user(event.user_id)
         if cookies:
             await bot_db.remove_user(event.user_id)
+            await bot_chat.clear_session(event.user_id)
     
 
 
