@@ -11,6 +11,7 @@ By using our Chat-GPT-4 powered Telegram bot, you agree to the following:
 
 - You are responsible for how you use the bot and any consequences that may result from your actions.
 - We are not responsible for any account bans or other issues that may arise as a result of using the bot.
+- You agree to allow us to use the required information to 
 """
 
 DONATION_STRING = """
@@ -34,6 +35,7 @@ To complete the OAuth process, please follow these steps:
 
 Once I receive the URL, I'll use it to complete the OAuth process.
 
+We do not store any of your content or session information with the exception of what is necessary to provide you the service.
 You can always log out by running the /start command and clicking on the Logout button.
 """
 
