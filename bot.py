@@ -173,20 +173,19 @@ async def answer_callback_query(event):
         STATES[event.sender_id] = State.FIRST_START
 
 
-## !! DISABLED AS SIDNEY IS KINDA SLOW SOMETIMES AND THE BOT FAILS TO ANSWER THE INLINE QUERY IN TIME 
-# @client.on(events.InlineQuery())
-# async def answer_inline_query(event):
-#     if event.text and event.text[-1] in ['.', '!', '?']:
-#         builder = event.builder
-#         cookies = await bot_db.get_user(event.sender_id)
-#         message, buttons = await answer_builder(event.sender_id, event.text, cookies)
-#         if not cookies:
-#             await event.answer(switch_pm=f'⚠️ {message}', switch_pm_param='start')
-#             return
-#         if buttons:
-#             await event.answer([builder.article(message, text=message, buttons=buttons)])
-#         else:
-#             await event.answer([builder.article(message, text=message)])
+@client.on(events.InlineQuery())
+async def answer_inline_query(event):
+    if event.text and event.text[-1] in ['.', '!', '?']:
+        builder = event.builder
+        cookies = await bot_db.get_user(event.sender_id)
+        message, buttons = await answer_builder(event.sender_id, event.text, cookies)
+        if not cookies:
+            await event.answer(switch_pm=f'⚠️ {message}', switch_pm_param='start')
+            return
+        if buttons:
+            await event.answer([builder.article(message, text=message, buttons=buttons)])
+        else:
+            await event.answer([builder.article(message, text=message)])
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: not e.is_private))
 async def message_handler_groups(event):
