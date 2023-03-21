@@ -3,7 +3,9 @@ import datetime
 import json
 import re
 import uuid
+import pytz
 from datetime import datetime
+from dateutil.parser import parse as dateparse
 
 import aiohttp
 import websockets
@@ -99,18 +101,23 @@ async def send_message(userID, message, cookies):
                 return answer, cards
             async for responses in ws:
                 js = json.loads(read_until_separator(responses))
-                if js['type'] == 2:
-                    if 'item' in js.keys():
-                        if 'throttling' in js['item'].keys():
-                            maxNumUserMessagesInConversation = js['item'][
-                                'throttling']['maxNumUserMessagesInConversation']
-                            numUserMessagesInConversation = js['item']['throttling']['numUserMessagesInConversation']
-                            messages = js['item']['messages']
-                            for message in messages:
-                                if message['author'] == 'bot' and 'messageType' not in message.keys() and 'text' in message.keys():
-                                    answer = message['text']
-                                    if 'adaptiveCards' in message.keys():
-                                        for _card in message['adaptiveCards']:
+                if js['type'] == 2 and 'item' in js.keys():
+                    item = js['item']
+                    conversationExpiryTime = item['conversationExpiryTime']
+                    conversationExpiryTime = dateparse(conversationExpiryTime)
+                    if pytz.utc.localize(datetime.now()) >= conversationExpiryTime:
+                        del MESSAGE_CREDS[userID]
+                        message, cards = await send_message(userID=userID, message=message, cookies=cookies)
+                        return message, cards
+                    if 'throttling' in item.keys() and 'messages' in item.keys():
+                        maxNumUserMessagesInConversation = js['item']['throttling']['maxNumUserMessagesInConversation']
+                        numUserMessagesInConversation = js['item']['throttling']['numUserMessagesInConversation']
+                        for response in item['messages']:
+                            if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text':
+                                if 'text' in response.keys():
+                                    answer = response['text']
+                                    if 'adaptiveCards' in response.keys():
+                                        for _card in response['adaptiveCards']:
                                             if _card['type'] == 'AdaptiveCard':
                                                 card = _card['body'][-1]['text']
                                                 markdown_pattern = re.findall(
@@ -118,6 +125,9 @@ async def send_message(userID, message, cookies):
                                                 cards.extend(
                                                     iter(markdown_pattern))
                                     break
+                                else:
+                                    if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                                        answer = response['adaptiveCards'][-1]['body'][0]['text']
                             if numUserMessagesInConversation >= (maxNumUserMessagesInConversation - 1) and userID in MESSAGE_CREDS:
                                 del MESSAGE_CREDS[userID]
                 if answer:
