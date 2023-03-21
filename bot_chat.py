@@ -124,10 +124,11 @@ async def send_message(userID, message, cookies):
                                                     r'\[(.*?)\]\((.*?)\)', card)
                                                 cards.extend(
                                                     iter(markdown_pattern))
-                                    break
                                 else:
                                     if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                                         answer = response['adaptiveCards'][-1]['body'][0]['text']
+                            if 'messageType' in response.keys() and response['messageType'] == 'Disengaged':
+                                    del MESSAGE_CREDS[userID]
                             if numUserMessagesInConversation >= (maxNumUserMessagesInConversation - 1) and userID in MESSAGE_CREDS:
                                 del MESSAGE_CREDS[userID]
                 if answer:
