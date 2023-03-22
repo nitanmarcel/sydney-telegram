@@ -23,7 +23,8 @@ class State(Enum):
     OAUTH = 3
     DONE = 4
     UNKNOWN = 5
-
+    SETTINGS = 6
+    CONNECT_CHAT = 7
 
 STATES = {}
 
@@ -49,7 +50,7 @@ async def start_handler(event):
         buttons = [
             [Button.inline(text='Donate', data='donate'),
              Button.inline(text='Logout', data='logout')],
-            [Button.inline(text='Source Code', data='donate')],
+            [Button.inline(text='Source Code', data='donate'), Button.inline(text='Settings', data='settings')],
         ]
     else:
         buttons = [
@@ -82,6 +83,25 @@ async def logout_handler(event):
     await event.edit("Logged out!")
 
 
+async def settings_hanlder(event):
+    user = await bot_db.get_user(event.sender_id)
+    style = bot_chat.Style(user['style'])
+    chat = user['chat']
+    
+    str_style = None
+    if style == bot_chat.Style.CREATIVE:
+        str_style = 'Creative'
+    if style == bot_chat.Style.BALANCED:
+        str_style = 'Balanced'
+    if style == bot_chat.Style.PRECISE:
+        str_style = 'Precise'
+    buttons = [
+        [Button.inline(f'Style: {str_style}', 'style'),
+        Button.inline(f'Connect Chat', 'conchat') if not chat else Button.inline('Remove Chat', 'rmchat')]
+    ]
+    await event.edit(bot_strings.SETTINGS_STRING, buttons=buttons)
+
+
 async def donate_handler(event):
     back_button = Button.inline(text='Back', data='back')
     source_button = Button.url(
@@ -89,11 +109,14 @@ async def donate_handler(event):
     await event.edit(bot_strings.DONATION_STRING,
                      buttons=[[back_button, source_button]], link_preview=False)
 
+async def handle_chat_connect(event):
+    await event.edit(bot_strings.CHAT_CONNECT_STRING, buttons=Button.inline('Back', 'back'))
 
 async def answer_builder(userId, query, cookies):
     message, buttons = None, None
     try:
-        message, cards = await bot_chat.send_message(userId, query, cookies)
+        user = await bot_db.get_user(userId)
+        message, cards = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(user['style']))
         if not message:
             message = bot_strings.PROCESSING_ERROR_STRING
         else:
@@ -114,14 +137,24 @@ async def message_handler_private(event):
         return
     if event.sender_id not in STATES.keys():
         STATES[event.sender_id] = State.FIRST_START
-    cookies = await bot_db.get_user(event.sender_id)
+    user = await bot_db.get_user(event.sender_id)
     if message.startswith("/start"):
-        STATES[event.sender_id] = State.DONE if cookies else State.FIRST_START
+        STATES[event.sender_id] = State.DONE if user else State.FIRST_START
         await start_handler(event)
         return
-    if cookies:
+    if STATES[event.sender_id] == State.CONNECT_CHAT:
+        try:
+            sender = await event.get_sender()
+            await client.send_message(int(event.text), bot_strings.CHAT_ID_CONNECTED_BROADCAST_STRING.format(sender.username or sender.first_name))
+            user = await bot_db.get_user(event.sender_id)
+            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=int(event.text), style=user['style'])
+        except ValueError:
+            await event.reply(bot_strings.INVALID_CHAT_ID_STRING)
+            raise
+        return
+    if user:
         async with client.action(event.chat_id, 'typing'):
-            message, buttons = await answer_builder(event.sender_id, message, cookies)
+            message, buttons = await answer_builder(event.sender_id, message, user['cookies'])
             if buttons:
                 await event.reply(message, buttons=buttons)
             else:
@@ -151,7 +184,9 @@ async def message_handler_private(event):
         await event.reply(bot_strings.AUTHENTIFICATION_DONE_STRING.format(bot_config.TELEGRAM_BOT_USERNAME),
                           buttons=[Button.inline('Stay logged in', 'keepcookies')])
         STATES[event.sender_id] = State.DONE
-        await bot_db.insert_user(event.sender_id, cookies, keep_cookies=False)
+        await bot_db.insert_user(event.sender_id, cookies, style=bot_chat.Style.BALANCED.value, chat=None, keep_cookies=False)
+    if state == State.SETTINGS:
+        await settings_hanlder(event)
 
 
 @client.on(events.CallbackQuery())
@@ -178,10 +213,31 @@ async def answer_callback_query(event):
         await logout_handler(event)
         STATES[event.sender_id] = State.FIRST_START
     if data == 'keepcookies':
-        save = await bot_db.insert_user(event.sender_id, cookies=None, keep_cookies=True)
+        user = await bot_db.get_user(event.sender_id)
+        save = await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=user['style'], keep_cookies=True)
         if save:
             message = await event.get_message()
             await event.edit(message.text)
+    if data == 'settings':
+        STATES[event.sender_id] == State.SETTINGS
+        await settings_hanlder(event)
+    if data == 'style':
+        user = await bot_db.get_user(event.sender_id)
+        style = bot_chat.Style(user['style'])
+        if style == bot_chat.Style.CREATIVE:
+            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=bot_chat.Style.BALANCED.value)
+        if style == bot_chat.Style.BALANCED:
+            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=bot_chat.Style.PRECISE.value)
+        if style == bot_chat.Style.PRECISE:
+            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=bot_chat.Style.CREATIVE.value)
+        await settings_hanlder(event)
+    if data == 'conchat':
+        STATES[event.sender_id] = State.CONNECT_CHAT
+        await handle_chat_connect(event)
+    if data == 'rmchat':
+        user = await bot_db.get_user(event.sender_id)
+        await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=None, style=user['style'])
+        await settings_hanlder(event)
     await event.answer()
 
 
@@ -191,8 +247,8 @@ async def answer_inline_query(event):
     if not message:
         return
     builder = event.builder
-    cookies = await bot_db.get_user(event.sender_id)
-    if not cookies:
+    user = await bot_db.get_user(event.sender_id)
+    if not user:
         await event.answer(switch_pm=bot_strings.INLINE_NO_COOKIE_STRING, switch_pm_param='start')
         return
     await event.answer([builder.article('Click me', text=f'❓ {message}', buttons=[Button.inline('Please wait...')])])
@@ -200,8 +256,8 @@ async def answer_inline_query(event):
 
 @client.on(events.Raw(UpdateBotInlineSend))
 async def handle_inline_send(event):
-    cookies = await bot_db.get_user(event.user_id)
-    message, buttons = await answer_builder(event.user_id, event.query, cookies)
+    user = await bot_db.get_user(event.user_id)
+    message, buttons = await answer_builder(event.user_id, event.query, user['cookies'])
     if buttons:
         await client.edit_message(event.msg_id, text=message, buttons=buttons)
     else:
@@ -210,8 +266,8 @@ async def handle_inline_send(event):
 @client.on(events.Raw(UpdateBotStopped))
 async def handle_bot_stopped(event):
     if event.stopped:
-        cookies = await bot_db.get_user(event.user_id)
-        if cookies:
+        user = await bot_db.get_user(event.user_id)
+        if user:
             await bot_db.remove_user(event.user_id)
             await bot_chat.clear_session(event.user_id)
     
@@ -221,11 +277,13 @@ async def handle_bot_stopped(event):
 async def message_handler_groups(event):
     if not event.mentioned or not event.text:
         return
-    cookies = await bot_db.get_user(event.sender_id)
+    user = await bot_db.get_user(userID=None, chatID=event.chat_id)
+    if not user:
+        user = await bot_db.get_user(userID=event.sender_id)
     message = event.text.replace(
         f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
-    message, buttons = await answer_builder(event.sender_id, message, cookies)
-    if not cookies:
+    message, buttons = await answer_builder(event.sender_id, message, user['cookies'] if user else None)
+    if not user:
         await event.reply(f'⚠️ {message}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
         return
     if buttons:

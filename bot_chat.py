@@ -6,6 +6,7 @@ import uuid
 import pytz
 from datetime import datetime
 from dateutil.parser import parse as dateparse
+from enum import Enum
 
 import aiohttp
 import websockets
@@ -14,6 +15,10 @@ MESSAGE_CREDS = {}
 
 URL = 'wss://sydney.bing.com/sydney/ChatHub'
 
+class Style(Enum):
+    CREATIVE = 1
+    BALANCED = 2
+    PRECISE = 3
 
 def read_until_separator(message):
     out = ""
@@ -51,7 +56,7 @@ async def create_session(cookies):
     return chat_session, error
 
 
-async def send_message(userID, message, cookies):
+async def send_message(userID, message, cookies, style):
     global MESSAGE_CREDS
     chat_session = None
     answer = None
@@ -62,9 +67,13 @@ async def send_message(userID, message, cookies):
             return error, cards
         chat_session['isStartOfSession'] = True
         chat_session['semaphore'] = asyncio.Semaphore(1)
+        chat_session['style'] = style
         MESSAGE_CREDS[userID] = chat_session
     else:
         chat_session = MESSAGE_CREDS[userID]
+        if chat_session['style'] != style:
+            del MESSAGE_CREDS[userID]
+            return await send_message(userID, message, cookies, style)
         chat_session['isStartOfSession'] = False
 
     chat_session['question'] = message
@@ -107,7 +116,7 @@ async def send_message(userID, message, cookies):
                     conversationExpiryTime = dateparse(conversationExpiryTime)
                     if pytz.utc.localize(datetime.now()) >= conversationExpiryTime:
                         del MESSAGE_CREDS[userID]
-                        message, cards = await send_message(userID=userID, message=message, cookies=cookies)
+                        message, cards = await send_message(userID=userID, message=message, cookies=cookies, style=style)
                         return message, cards
                     if 'throttling' in item.keys() and 'messages' in item.keys():
                         maxNumUserMessagesInConversation = js['item']['throttling']['maxNumUserMessagesInConversation']
@@ -136,24 +145,30 @@ async def send_message(userID, message, cookies):
         return answer, cards
 
 
-async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, **kwargs):
+async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, style, **kwargs):
     global MESSAGE_CREDS
     now = datetime.now()
     formatted_date = now.strftime('%Y-%m-%dT%H:%M:%S%z')
 
-    payload = {
-        "arguments": [
-            {
-                "source": "cib",
-                "optionsSets": [
+    optionsSets = [
                     "nlu_direct_response_filter",
                     "deepleo",
                     "disable_emoji_spoken_text",
                     "responsible_ai_policy_235",
                     "enablemm",
-                    "galileo",
-                    "dv3sugg"
-                ],
+                ]
+    if style == Style.CREATIVE:
+        optionsSets.extend(['h3imaginative', 'dv3sugg', 'clgalileo', 'gencontentv3'])
+    if style == Style.BALANCED:
+        optionsSets.extend(['galileo', 'newspoleansgnd', 'dv3sugg'])
+    if style == Style.PRECISE:
+        optionsSets.extend(['h3precise', 'dv3sugg', 'clgalileo', 'dlcodex3k', 'dltokens18k', 'enablesd'])
+
+    payload = {
+        "arguments": [
+            {
+                "source": "cib",
+                "optionsSets": optionsSets,
                 "allowedMessageTypes": [
                     "Chat",
                     "InternalSearchQuery",
