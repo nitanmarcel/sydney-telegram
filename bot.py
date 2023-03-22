@@ -139,7 +139,7 @@ async def message_handler_private(event):
         STATES[event.sender_id] = State.FIRST_START
     user = await bot_db.get_user(event.sender_id)
     if message.startswith("/start"):
-        STATES[event.sender_id] = State.DONE if user else State.FIRST_START
+        STATES[event.sender_id] = State.DONE if user and user['cookies'] else State.FIRST_START
         await start_handler(event)
         return
     if STATES[event.sender_id] == State.CONNECT_CHAT:
@@ -152,7 +152,7 @@ async def message_handler_private(event):
             await event.reply(bot_strings.INVALID_CHAT_ID_STRING)
             raise
         return
-    if user:
+    if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
             message, buttons = await answer_builder(event.sender_id, message, user['cookies'])
             if buttons:
