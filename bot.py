@@ -40,7 +40,7 @@ async def parse_footnotes(text):
 
     def replace_fn(match):
         fn_number = match.group(1)
-        return fn_number.translate(superscript_table)
+        return f' {fn_number.translate(superscript_table)}'
     return re.sub(pattern, replace_fn, text)
 
 
