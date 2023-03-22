@@ -11,7 +11,7 @@ db = Gino()
 ENCRYPTION_KEY = None
 
 
-def generate_key():
+def _generate_key():
     encryption_key = fernet.Fernet.generate_key()
     with open('bot_config.py', 'r+') as f:
         contents = f.read()
@@ -26,14 +26,14 @@ def generate_key():
     return encryption_key
 
 
-def cookies_save(cookie_jar):
+def _cookies_save(cookie_jar):
     f = fernet.Fernet(ENCRYPTION_KEY)
     data = pickle.dumps(cookie_jar._cookies, pickle.HIGHEST_PROTOCOL)
     compressed_data = gzip.compress(data)
     return f.encrypt(compressed_data)
 
 
-def cookies_load(cookie_jar):
+def _cookies_load(cookie_jar):
     f = fernet.Fernet(ENCRYPTION_KEY)
     compressed_data = f.decrypt(cookie_jar)
     data = gzip.decompress(compressed_data)
@@ -47,6 +47,8 @@ class User(db.Model):
     __tablename__ = 'usersb'
     id = db.Column(db.Integer(), primary_key=True)
     cookies = db.Column(db.LargeBinary())
+    style = db.Column(db.Integer())
+    chat = db.Column(db.BigInteger())
 
 
 USERS = {}
@@ -64,22 +66,32 @@ async def init(dbstring, encryption_key):
     await db.gino.create_all()
 
     all_users = await db.all(User.query)
-    USERS = {u.id: cookies_load(u.cookies) for u in all_users}
+    USERS = {u.id : {'cookies': _cookies_load(u.cookies) if u.cookies else None, 'style': u.style, 'chat': u.chat} for u in all_users}
     return USERS
 
 
-async def get_user(userID):
-    return USERS[userID] if userID in USERS.keys() else None
+async def get_user(userID=None, chatID=None):
+    if userID:
+        return USERS[userID] if userID in USERS.keys() else None
+    if chatID and USERS:
+        for k,v in USERS.items():
+            if v['chat'] == chatID:
+                return v
+    return None
 
 
-async def insert_user(userID, cookies=None, keep_cookies=False):
+async def insert_user(userID, cookies=None, chat=None, style=None, keep_cookies=False):
     global USERS
-    if cookies:
-        USERS[userID] = cookies
     if userID not in USERS.keys():
-        return None
-    if keep_cookies and userID:
-        return await User.create(id=userID, cookies=cookies_save(USERS[userID]))
+        USERS[userID] = {'cookies': None, 'Style': None, 'chat': chat}
+    USERS[userID]['cookies'] = cookies
+    USERS[userID]['chat'] = chat
+    USERS[userID]['style'] = style
+    user = await User.get(userID)
+    if not user:
+        return await User.create(id=userID, cookies=_cookies_save(cookies) if keep_cookies else None, chat=chat, style=style)
+    await user.update(cookies=_cookies_save(USERS[userID]['cookies']) if cookies else None,
+                      chat=USERS[userID]['chat'], style=USERS[userID]['style']).apply()
     return USERS[userID]
 
 

@@ -61,6 +61,25 @@ There are also two other modes you can use to ask me questions:
 
 """
 
+SETTINGS_STRING = """
+Here you can change your bot settings.
+
+- Style: Choose a conversation style, between Creative, Balanced and Precise
+- Chat: Connect up to a chat that can conversate with the bot on your behalf
+"""
+
+CHAT_CONNECT_STRING = """
+Enter the id of the chat you want to connect to.
+"""
+
+INVALID_CHAT_ID_STRING = """
+The id of the entered chat is invalid!
+"""
+
+CHAT_ID_CONNECTED_BROADCAST_STRING = """
+⚠️ {} connected to this chat. Everyone can use the bot now!
+"""
+
 NOT_IN_WHITELST_STRING = """
 ⚠️ You don\'t have access to this service! Make sure you're accepted into the whitelist in the mobile application
 """
