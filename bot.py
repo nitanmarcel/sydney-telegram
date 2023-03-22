@@ -26,6 +26,7 @@ class State(Enum):
     SETTINGS = 6
     CONNECT_CHAT = 7
 
+
 STATES = {}
 
 logging.basicConfig(level=logging.INFO)
@@ -50,7 +51,8 @@ async def start_handler(event):
         buttons = [
             [Button.inline(text='Donate', data='donate'),
              Button.inline(text='Logout', data='logout')],
-            [Button.inline(text='Source Code', data='donate'), Button.inline(text='Settings', data='settings')],
+            [Button.inline(text='Source Code', data='donate'),
+             Button.inline(text='Settings', data='settings')],
         ]
     else:
         buttons = [
@@ -87,7 +89,7 @@ async def settings_hanlder(event):
     user = await bot_db.get_user(event.sender_id)
     style = bot_chat.Style(user['style'])
     chat = user['chat']
-    
+
     str_style = None
     if style == bot_chat.Style.CREATIVE:
         str_style = 'Creative'
@@ -97,7 +99,7 @@ async def settings_hanlder(event):
         str_style = 'Precise'
     buttons = [
         [Button.inline(f'Style: {str_style}', 'style'),
-        Button.inline(f'Connect Chat', 'conchat') if not chat else Button.inline('Remove Chat', 'rmchat')]
+         Button.inline(f'Connect Chat', 'conchat') if not chat else Button.inline('Remove Chat', 'rmchat')]
     ]
     await event.edit(bot_strings.SETTINGS_STRING, buttons=buttons)
 
@@ -109,8 +111,10 @@ async def donate_handler(event):
     await event.edit(bot_strings.DONATION_STRING,
                      buttons=[[back_button, source_button]], link_preview=False)
 
+
 async def handle_chat_connect(event):
     await event.edit(bot_strings.CHAT_CONNECT_STRING, buttons=Button.inline('Back', 'back'))
+
 
 async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None):
     message, buttons = None, None
@@ -154,7 +158,7 @@ async def message_handler_private(event):
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
             message, buttons = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
-             cookies=user['cookies'])
+                                                    cookies=user['cookies'])
             if buttons:
                 await event.reply(message, buttons=buttons)
             else:
@@ -263,6 +267,7 @@ async def handle_inline_send(event):
     else:
         await client.edit_message(event.msg_id, text=message)
 
+
 @client.on(events.Raw(UpdateBotStopped))
 async def handle_bot_stopped(event):
     if event.stopped:
@@ -270,7 +275,6 @@ async def handle_bot_stopped(event):
         if user:
             await bot_db.remove_user(event.user_id)
             await bot_chat.clear_session(event.user_id)
-    
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: not e.is_private))
