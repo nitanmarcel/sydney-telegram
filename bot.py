@@ -112,11 +112,10 @@ async def donate_handler(event):
 async def handle_chat_connect(event):
     await event.edit(bot_strings.CHAT_CONNECT_STRING, buttons=Button.inline('Back', 'back'))
 
-async def answer_builder(userId, query, cookies):
+async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None):
     message, buttons = None, None
     try:
-        user = await bot_db.get_user(userId)
-        message, cards = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(user['style']))
+        message, cards = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
         if not message:
             message = bot_strings.PROCESSING_ERROR_STRING
         else:
@@ -154,7 +153,8 @@ async def message_handler_private(event):
         return
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
-            message, buttons = await answer_builder(event.sender_id, message, user['cookies'])
+            message, buttons = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
+             cookies=user['cookies'])
             if buttons:
                 await event.reply(message, buttons=buttons)
             else:
@@ -257,7 +257,7 @@ async def answer_inline_query(event):
 @client.on(events.Raw(UpdateBotInlineSend))
 async def handle_inline_send(event):
     user = await bot_db.get_user(event.user_id)
-    message, buttons = await answer_builder(event.user_id, event.query, user['cookies'])
+    message, buttons = await answer_builder(userId=event.user_id, query=event.query, style=user['style'], cookies=user['cookies'])
     if buttons:
         await client.edit_message(event.msg_id, text=message, buttons=buttons)
     else:
@@ -282,7 +282,7 @@ async def message_handler_groups(event):
         user = await bot_db.get_user(userID=event.sender_id)
     message = event.text.replace(
         f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
-    message, buttons = await answer_builder(event.sender_id, message, user['cookies'] if user else None)
+    message, buttons = await answer_builder(chatID=event.sender_id, query=message, style=user['style'], cookies=user['cookies'] if user else None)
     if not user:
         await event.reply(f'⚠️ {message}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
         return

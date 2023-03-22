@@ -71,13 +71,15 @@ async def init(dbstring, encryption_key):
 
 
 async def get_user(userID=None, chatID=None):
+    user = None
     if userID:
-        return USERS[userID] if userID in USERS.keys() else None
+        user = USERS[userID] if userID in USERS.keys() else None
     if chatID and USERS:
         for k,v in USERS.items():
             if v['chat'] == chatID:
-                return v
-    return None
+                user = v
+                break
+    return user
 
 
 async def insert_user(userID, cookies=None, chat=None, style=None, keep_cookies=False):
