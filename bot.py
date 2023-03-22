@@ -206,6 +206,9 @@ async def answer_callback_query(event):
     global STATES
     if event.sender_id not in STATES.keys():
         STATES[event.sender_id] = State.FIRST_START
+    user = await bot_db.get_user(userID=event.sender_id)
+    if user and user['cookies']:
+        STATES[event.sender_id] = State.DONE
     data = event.data.decode()
     if data == 'donate':
         await donate_handler(event)
