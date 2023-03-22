@@ -37,13 +37,15 @@ client = TelegramClient('sydney', bot_config.TELEGRAM_CLIENT_ID,
 
 
 async def parse_footnotes(text):
+    iset = "0123456789"
+    oset = "⁰¹²³⁴⁵⁶⁷⁸⁹"
     pattern = r"\[\^(\d+)\^\]"
-    superscript_table = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
-
-    def replace_fn(match):
-        fn_number = match.group(1)
-        return f' {fn_number.translate(superscript_table)}'
-    return re.sub(pattern, replace_fn, text)
+    matches = re.findall(pattern, text)
+    for match in matches:
+        text = text.replace(
+            f"[^{match}^]", f" {match.translate(str.maketrans(iset, oset))}"
+        )
+    return text
 
 
 async def start_handler(event):
