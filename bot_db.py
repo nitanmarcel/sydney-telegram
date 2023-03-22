@@ -66,8 +66,8 @@ async def init(dbstring, encryption_key):
     await db.gino.create_all()
 
     all_users = await db.all(User.query)
-    USERS = {u.id: {'cookies': _cookies_load(
-        u.cookies) if u.cookies else None, 'style': u.style, 'chat': u.chat} for u in all_users}
+    USERS = {u.id: {'cookies': _cookies_load(u.cookies) if u.cookies else None, 
+                    'style': u.style, 'chat': u.chat, 'id': u.id} for u in all_users}
     return USERS
 
 
@@ -90,6 +90,7 @@ async def insert_user(userID, cookies=None, chat=None, style=None, keep_cookies=
     USERS[userID]['cookies'] = cookies
     USERS[userID]['chat'] = chat
     USERS[userID]['style'] = style
+    USERS[userID]['id'] = userID
     user = await User.get(userID)
     if not user:
         return await User.create(id=userID, cookies=_cookies_save(cookies) if keep_cookies else None, chat=chat, style=style)
