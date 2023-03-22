@@ -101,7 +101,8 @@ async def settings_hanlder(event):
         str_style = 'Precise'
     buttons = [
         [Button.inline(f'Style: {str_style}', 'style'),
-         Button.inline(f'Connect Chat', 'conchat') if not chat else Button.inline('Remove Chat', 'rmchat')]
+         Button.inline(f'Connect Chat', 'conchat') if not chat else Button.inline('Remove Chat', 'rmchat')],
+         [Button.inline('Back', 'back')]
     ]
     await event.edit(bot_strings.SETTINGS_STRING, buttons=buttons)
 
