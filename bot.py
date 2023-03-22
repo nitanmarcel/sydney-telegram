@@ -195,7 +195,7 @@ async def answer_inline_query(event):
     if not cookies:
         await event.answer(switch_pm=bot_strings.INLINE_NO_COOKIE_STRING, switch_pm_param='start')
         return
-    await event.answer([builder.article('Click me', text=bot_strings.INLINE_PROCESSING_STRING, buttons=[Button.inline('Please wait...')])])
+    await event.answer([builder.article('Click me', text=f'❓ {message}', buttons=[Button.inline('Please wait...')])])
 
 
 @client.on(events.Raw(UpdateBotInlineSend))
