@@ -36,16 +36,9 @@ client = TelegramClient('sydney', bot_config.TELEGRAM_CLIENT_ID,
                         bot_config.TELEGRAM_CLIENT_HASH, catch_up=True)
 
 
-async def parse_footnotes(text):
-    iset = "0123456789"
-    oset = "⁰¹²³⁴⁵⁶⁷⁸⁹"
-    pattern = r"\[\^(\d+)\^\]"
-    matches = re.findall(pattern, text)
-    for match in matches:
-        text = text.replace(
-            f"[^{match}^]", f" {match.translate(str.maketrans(iset, oset))}"
-        )
-    return text
+def parse_footnotes(text, __pattern=r"\[\^(\d+)\^\]"):
+    table = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+    return re.sub(__pattern, lambda match: f" {match.group(1).translate(table)}", text)
 
 
 async def start_handler(event):
@@ -126,7 +119,7 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
         if not message:
             message = bot_strings.PROCESSING_ERROR_STRING
         else:
-            message = await parse_footnotes(message)
+            message = parse_footnotes(message)
             buttons = [Button.url(card[0], card[1]) for card in cards]
             buttons = [[buttons[i], buttons[i+1]] if i+1 <
                        len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
