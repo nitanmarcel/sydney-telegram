@@ -66,7 +66,8 @@ async def init(dbstring, encryption_key):
     await db.gino.create_all()
 
     all_users = await db.all(User.query)
-    USERS = {u.id : {'cookies': _cookies_load(u.cookies) if u.cookies else None, 'style': u.style, 'chat': u.chat} for u in all_users}
+    USERS = {u.id: {'cookies': _cookies_load(
+        u.cookies) if u.cookies else None, 'style': u.style, 'chat': u.chat} for u in all_users}
     return USERS
 
 
@@ -75,7 +76,7 @@ async def get_user(userID=None, chatID=None):
     if userID:
         user = USERS[userID] if userID in USERS.keys() else None
     if chatID and USERS:
-        for k,v in USERS.items():
+        for k, v in USERS.items():
             if v['chat'] == chatID:
                 user = v
                 break

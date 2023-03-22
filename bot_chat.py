@@ -15,10 +15,12 @@ MESSAGE_CREDS = {}
 
 URL = 'wss://sydney.bing.com/sydney/ChatHub'
 
+
 class Style(Enum):
     CREATIVE = 1
     BALANCED = 2
     PRECISE = 3
+
 
 def read_until_separator(message):
     out = ""
@@ -28,9 +30,11 @@ def read_until_separator(message):
         out += x
     return out
 
+
 async def clear_session(userID):
     if userID in MESSAGE_CREDS.keys():
         del MESSAGE_CREDS[userID]
+
 
 async def create_session(cookies):
     chat_session = {}
@@ -80,19 +84,19 @@ async def send_message(userID, message, cookies, style):
     async with chat_session['semaphore']:
         message_payload = await build_message(**chat_session)
         async with websockets.connect(URL,
-                                              ssl=True,
-                                              extra_headers={
-                                                  "Origin": "https://www.bing.com"},
-                                              server_hostname='sydney.bing.com',
-                                              origin='https://www.bing.com',
-                                              user_agent_header='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
-                                              extensions=[
-                                                  websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
+                                      ssl=True,
+                                      extra_headers={
+                                          "Origin": "https://www.bing.com"},
+                                      server_hostname='sydney.bing.com',
+                                      origin='https://www.bing.com',
+                                      user_agent_header='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
+                                      extensions=[
+                                          websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
                                                       server_max_window_bits=11,
                                                       client_max_window_bits=11,
                                                       compress_settings={
                                                           'memLevel': 4},
-                                                  ), ]) as ws:
+                                          ), ]) as ws:
             await ws.send('{"protocol":"json","version":1}')
             await ws.recv()
             await ws.send('{"type":6}')
@@ -119,7 +123,8 @@ async def send_message(userID, message, cookies, style):
                         message, cards = await send_message(userID=userID, message=message, cookies=cookies, style=style)
                         return message, cards
                     if 'throttling' in item.keys() and 'messages' in item.keys():
-                        maxNumUserMessagesInConversation = js['item']['throttling']['maxNumUserMessagesInConversation']
+                        maxNumUserMessagesInConversation = js['item'][
+                            'throttling']['maxNumUserMessagesInConversation']
                         numUserMessagesInConversation = js['item']['throttling']['numUserMessagesInConversation']
                         for response in item['messages']:
                             if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text':
@@ -137,7 +142,7 @@ async def send_message(userID, message, cookies, style):
                                     if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                                         answer = response['adaptiveCards'][-1]['body'][0]['text']
                             if 'messageType' in response.keys() and response['messageType'] == 'Disengaged':
-                                    del MESSAGE_CREDS[userID]
+                                del MESSAGE_CREDS[userID]
                             if numUserMessagesInConversation >= (maxNumUserMessagesInConversation - 1) and userID in MESSAGE_CREDS:
                                 del MESSAGE_CREDS[userID]
                 if answer:
@@ -151,18 +156,20 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
     formatted_date = now.strftime('%Y-%m-%dT%H:%M:%S%z')
 
     optionsSets = [
-                    "nlu_direct_response_filter",
-                    "deepleo",
-                    "disable_emoji_spoken_text",
-                    "responsible_ai_policy_235",
-                    "enablemm",
-                ]
+        "nlu_direct_response_filter",
+        "deepleo",
+        "disable_emoji_spoken_text",
+        "responsible_ai_policy_235",
+        "enablemm",
+    ]
     if style == Style.CREATIVE:
-        optionsSets.extend(['h3imaginative', 'dv3sugg', 'clgalileo', 'gencontentv3'])
+        optionsSets.extend(['h3imaginative', 'dv3sugg',
+                           'clgalileo', 'gencontentv3'])
     if style == Style.BALANCED:
         optionsSets.extend(['galileo', 'newspoleansgnd', 'dv3sugg'])
     if style == Style.PRECISE:
-        optionsSets.extend(['h3precise', 'dv3sugg', 'clgalileo', 'dlcodex3k', 'dltokens18k', 'enablesd'])
+        optionsSets.extend(
+            ['h3precise', 'dv3sugg', 'clgalileo', 'dlcodex3k', 'dltokens18k', 'enablesd'])
 
     payload = {
         "arguments": [
