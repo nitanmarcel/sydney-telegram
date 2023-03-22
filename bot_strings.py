@@ -65,7 +65,7 @@ SETTINGS_STRING = """
 Here you can change your bot settings.
 
 - Style: Choose a conversation style, between Creative, Balanced and Precise
-- Chat: Connect up to a chat that can conversate with the bot on your behalf
+- Chat: Connect up to a chat that can conversate with the bot on your behalf. You need to be admin in the respective chat.
 """
 
 CHAT_CONNECT_STRING = """
@@ -74,6 +74,10 @@ Enter the id of the chat you want to connect to.
 
 INVALID_CHAT_ID_STRING = """
 The id of the entered chat is invalid!
+"""
+
+CHAT_CONNECT_NOT_ADMIN_STRING = """
+You must be an admin in the target chat, before connecting your account.
 """
 
 CHAT_ID_CONNECTED_BROADCAST_STRING = """

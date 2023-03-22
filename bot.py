@@ -150,12 +150,18 @@ async def message_handler_private(event):
     if STATES[event.sender_id] == State.CONNECT_CHAT:
         try:
             sender = await event.get_sender()
+            permission = await client.get_permissions(int(event.text), event.sender_id)
+            if not permission.is_admin:
+                await event.reply(bot_strings.CHAT_CONNECT_NOT_ADMIN_STRING)
+                return
+            user = await bot_db.get_user(chatID=int(event.text))
+            if user:
+                await bot_db.insert_user(user['id'], cookies=user['cookies'], chat=None, style=user['style'])
             await client.send_message(int(event.text), bot_strings.CHAT_ID_CONNECTED_BROADCAST_STRING.format(sender.username or sender.first_name))
             user = await bot_db.get_user(event.sender_id)
             await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=int(event.text), style=user['style'])
         except ValueError:
             await event.reply(bot_strings.INVALID_CHAT_ID_STRING)
-            raise
         return
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
