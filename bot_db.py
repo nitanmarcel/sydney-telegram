@@ -90,7 +90,7 @@ async def insert_user(userID, cookies=None, chat=None, style=None, keep_cookies=
     user = await User.get(userID)
     if not user:
         return await User.create(id=userID, cookies=_cookies_save(cookies) if keep_cookies else None, chat=chat, style=style)
-    await user.update(cookies=_cookies_save(USERS[userID]['cookies']) if cookies else None,
+    await user.update(cookies=_cookies_save(USERS[userID]['cookies']) if keep_cookies else None,
                       chat=USERS[userID]['chat'], style=USERS[userID]['style']).apply()
     return USERS[userID]
 
