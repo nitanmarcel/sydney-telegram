@@ -83,7 +83,7 @@ async def get_user(userID=None, chatID=None):
     return user
 
 
-async def insert_user(userID, cookies=None, chat=None, style=None, keep_cookies=False):
+async def insert_user(userID, cookies=None, chat=None, style=None, keep_cookies=True):
     global USERS
     if userID not in USERS.keys():
         USERS[userID] = {'cookies': None, 'Style': None, 'chat': chat}
