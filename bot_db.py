@@ -45,7 +45,7 @@ def _cookies_load(cookie_jar):
 
 class User(db.Model):
     __tablename__ = 'usersb'
-    id = db.Column(db.Integer(), primary_key=True)
+    id = db.Column(db.BigInteger(), primary_key=True)
     cookies = db.Column(db.LargeBinary())
     style = db.Column(db.Integer())
     chat = db.Column(db.BigInteger())
