@@ -293,10 +293,11 @@ async def message_handler_groups(event):
         user = await bot_db.get_user(userID=event.sender_id)
     message = event.text.replace(
         f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
-    message, buttons = await answer_builder(chatID=event.sender_id, query=message, style=user['style'], cookies=user['cookies'] if user else None)
     if not user:
+        message, buttons = await answer_builder(chatID=event.sender_id, query=message, style=bot_chat.Style.BALANCED, cookies=None)
         await event.reply(f'⚠️ {message}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
         return
+    message, buttons = await answer_builder(chatID=event.sender_id, query=message, style=user['style'], cookies=user['cookies'] if user else None)
     if buttons:
         await event.reply(message, buttons=buttons)
     else:
