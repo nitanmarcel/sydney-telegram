@@ -10,11 +10,11 @@ from enum import Enum
 
 import aiohttp
 import websockets
+import bot_img
 
 MESSAGE_CREDS = {}
 
 URL = 'wss://sydney.bing.com/sydney/ChatHub'
-
 
 class Style(Enum):
     CREATIVE = 1
@@ -141,6 +141,14 @@ async def send_message(userID, message, cookies, style):
                                 else:
                                     if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                                         answer = response['adaptiveCards'][-1]['body'][0]['text']
+                            elif 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
+                                images, error = await bot_img.generate_image(userID, chat_session['question'], cookies)
+                                if error:
+                                    answer = error
+                                    cards = None
+                                else:
+                                    answer = images
+                                    cards = None
                             if 'messageType' in response.keys() and response['messageType'] == 'Disengaged':
                                 del MESSAGE_CREDS[userID]
                             if numUserMessagesInConversation >= (maxNumUserMessagesInConversation - 1) and userID in MESSAGE_CREDS:

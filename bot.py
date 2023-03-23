@@ -8,6 +8,7 @@ from urllib.parse import parse_qs, urlparse
 from telethon import TelegramClient, events
 from telethon.tl.types import UpdateBotStopped
 from telethon.tl.types import UpdateBotInlineSend
+from telethon.tl.types import InputMediaPhotoExternal
 from telethon.tl.custom import Button
 
 import bot_chat
@@ -116,13 +117,15 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
     message, buttons = None, None
     try:
         message, cards = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
-        if not message:
-            message = bot_strings.PROCESSING_ERROR_STRING
-        else:
-            message = parse_footnotes(message)
-            buttons = [Button.url(card[0], card[1]) for card in cards]
-            buttons = [[buttons[i], buttons[i+1]] if i+1 <
-                       len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
+        if not isinstance(message, list):
+            if not message:
+                message = bot_strings.PROCESSING_ERROR_STRING
+            else:
+                message = parse_footnotes(message)
+                if cards:
+                    buttons = [Button.url(card[0], card[1]) for card in cards]
+                    buttons = [[buttons[i], buttons[i+1]] if i+1 <
+                            len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
     except asyncio.TimeoutError:
         message = bot_strings.TIMEOUT_ERROR_STRING
     return message, buttons
@@ -161,10 +164,13 @@ async def message_handler_private(event):
         async with client.action(event.chat_id, 'typing'):
             message, buttons = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
                                                     cookies=user['cookies'])
-            if buttons:
-                await event.reply(message, buttons=buttons)
+            if not isinstance(message, list):
+                if buttons:
+                    await event.reply(message, buttons=buttons)
+                else:
+                    await event.reply(message)
             else:
-                await event.reply(message)
+                await event.reply(file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in message])
         return
     state = STATES[event.sender_id]
     if state == State.FIRST_START:
@@ -269,6 +275,8 @@ async def answer_inline_query(event):
 async def handle_inline_send(event):
     user = await bot_db.get_user(event.user_id)
     message, buttons = await answer_builder(userId=event.user_id, query=event.query, style=user['style'], cookies=user['cookies'])
+    if isinstance(message, list):
+        message = '- ' + '\n- '.join(message.split('?')[0])
     if buttons:
         await client.edit_message(event.msg_id, text=message, buttons=buttons)
     else:
@@ -298,10 +306,13 @@ async def message_handler_groups(event):
         await event.reply(f'⚠️ {message}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
         return
     message, buttons = await answer_builder(chatID=event.sender_id, query=message, style=user['style'], cookies=user['cookies'] if user else None)
-    if buttons:
-        await event.reply(message, buttons=buttons)
+    if not isinstance(message, list):
+        if buttons:
+            await event.reply(message, buttons=buttons)
+        else:
+            await event.reply(message)
     else:
-        await event.reply(message)
+        await event.reply(file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in message])
 
 
 async def main():
