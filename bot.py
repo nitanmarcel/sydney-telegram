@@ -191,6 +191,7 @@ async def message_handler_private(event):
                           buttons=[Button.inline('Stay logged in', 'keepcookies')])
         STATES[event.sender_id] = State.DONE
         await bot_db.insert_user(event.sender_id, cookies, style=bot_chat.Style.BALANCED.value, chat=None, keep_cookies=False)
+        await start_handler(event)
     if state == State.SETTINGS:
         await settings_hanlder(event)
 
@@ -221,6 +222,7 @@ async def answer_callback_query(event):
     if data == 'logout':
         await logout_handler(event)
         STATES[event.sender_id] = State.FIRST_START
+        await start_handler(event)
     if data == 'keepcookies':
         user = await bot_db.get_user(event.sender_id)
         save = await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=user['style'], keep_cookies=True)
