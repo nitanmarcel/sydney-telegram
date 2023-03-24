@@ -16,6 +16,7 @@ MESSAGE_CREDS = {}
 
 URL = 'wss://sydney.bing.com/sydney/ChatHub'
 
+
 class Style(Enum):
     CREATIVE = 1
     BALANCED = 2
@@ -127,17 +128,16 @@ async def send_message(userID, message, cookies, style):
                             'throttling']['maxNumUserMessagesInConversation']
                         numUserMessagesInConversation = js['item']['throttling']['numUserMessagesInConversation']
                         for response in item['messages']:
-                            if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text':
-                                if 'text' in response.keys():
-                                    answer = response['text']
-                                    if 'adaptiveCards' in response.keys():
-                                        for _card in response['adaptiveCards']:
-                                            if _card['type'] == 'AdaptiveCard':
-                                                card = _card['body'][-1]['text']
-                                                markdown_pattern = re.findall(
-                                                    r'\[(.*?)\]\((.*?)\)', card)
-                                                cards.extend(
-                                                    iter(markdown_pattern))
+                            if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
+                                answer = response['text']
+                                if 'adaptiveCards' in response.keys():
+                                    for _card in response['adaptiveCards']:
+                                        if _card['type'] == 'AdaptiveCard':
+                                            card = _card['body'][-1]['text']
+                                            markdown_pattern = re.findall(
+                                                r'\[(.*?)\]\((.*?)\)', card)
+                                            cards.extend(
+                                                iter(markdown_pattern))
                                 else:
                                     if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                                         answer = response['adaptiveCards'][-1]['body'][0]['text']

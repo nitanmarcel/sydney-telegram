@@ -96,7 +96,7 @@ async def settings_hanlder(event):
     buttons = [
         [Button.inline(f'Style: {str_style}', 'style'),
          Button.inline(f'Connect Chat', 'conchat') if not chat else Button.inline('Remove Chat', 'rmchat')],
-         [Button.inline('Back', 'back')]
+        [Button.inline('Back', 'back')]
     ]
     await event.edit(bot_strings.SETTINGS_STRING, buttons=buttons)
 
@@ -125,7 +125,7 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
                 if cards:
                     buttons = [Button.url(card[0], card[1]) for card in cards]
                     buttons = [[buttons[i], buttons[i+1]] if i+1 <
-                            len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
+                               len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
     except asyncio.TimeoutError:
         message = bot_strings.TIMEOUT_ERROR_STRING
     return message, buttons
