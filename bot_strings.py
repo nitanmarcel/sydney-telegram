@@ -93,7 +93,11 @@ TIMEOUT_ERROR_STRING = """
 """
 
 PROCESSING_ERROR_STRING = """
-⚠️ There was an error processing your response! Try with another question!
+⚠️ There was an error processing your response! Try again later.
+"""
+
+POCESSING_ALREADY_STRING = """
+⚠️ Processing of the last query didn't finished yet!
 """
 
 INLINE_NO_COOKIE_STRING = """
