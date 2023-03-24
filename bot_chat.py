@@ -149,7 +149,7 @@ async def send_message(userID, message, cookies, style):
                                 else:
                                     answer = images
                                     cards = None
-                            if 'messageType' in response.keys() and response['messageType'] == 'Disengaged':
+                            if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
                                 del MESSAGE_CREDS[userID]
                             if numUserMessagesInConversation >= (maxNumUserMessagesInConversation - 1) and userID in MESSAGE_CREDS:
                                 del MESSAGE_CREDS[userID]
