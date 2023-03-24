@@ -66,7 +66,7 @@ async def init(dbstring, encryption_key):
     await db.gino.create_all()
 
     all_users = await db.all(User.query)
-    USERS = {u.id: {'cookies': _cookies_load(u.cookies) if u.cookies else None, 
+    USERS = {u.id: {'cookies': _cookies_load(u.cookies) if u.cookies else None,
                     'style': u.style, 'chat': u.chat, 'id': u.id} for u in all_users}
     return USERS
 

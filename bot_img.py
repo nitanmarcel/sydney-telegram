@@ -8,6 +8,7 @@ import bot_strings
 TRIES = {}
 MAX_TRIES = 3
 
+
 async def get_images(url, aiosession):
     images = []
     async with aiosession.get(url) as response:
@@ -18,22 +19,23 @@ async def get_images(url, aiosession):
             images = [img.get('src') for img in img_tags]
     return images
 
+
 async def generate_image(userID, query, cookies):
     global TRIES
     headers = {
-    'User-Agent':
-    'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/111.0 BingSapphire/24.1.410310303',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-    'Origin': 'https://www.bing.com',
-    'Referer': 'https://www.bing.com/images/create?FORM=GENILP',
-    'Accept-Language': 'en-US,en;q=0.5'
+        'User-Agent':
+        'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/111.0 BingSapphire/24.1.410310303',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+        'Origin': 'https://www.bing.com',
+        'Referer': 'https://www.bing.com/images/create?FORM=GENILP',
+        'Accept-Language': 'en-US,en;q=0.5'
     }
     data = {'q': query,
             'qs': 'ds'}
 
     params = {'q': query,
-            'rt': 3,
-            'FORM': 'GENCRE'}
+              'rt': 3,
+              'FORM': 'GENCRE'}
 
     images, error = [], None
     url = None
