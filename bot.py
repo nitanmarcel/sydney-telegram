@@ -114,22 +114,20 @@ async def handle_chat_connect(event):
 
 
 async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None):
-    message, buttons = None, None
     try:
-        message, cards, is_error = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
+        message, cards = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
+        buttons = None
         if not isinstance(message, list):
-            if is_error:
-                message = bot_strings.PROCESSING_ERROR_STRING
-                buttons = [Button.inline(text='New topic', data='newtopic')]
-            else:
-                message = parse_footnotes(message)
-                if cards:
-                    buttons = [Button.url(card[0], card[1]) for card in cards]
-                    buttons = [[buttons[i], buttons[i+1]] if i+1 <
-                               len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
-    except asyncio.TimeoutError:
-        message = bot_strings.TIMEOUT_ERROR_STRING
-    return message, buttons
+            message = parse_footnotes(message)
+        if cards:
+            buttons = [Button.url(card[0], card[1]) for card in cards]
+            buttons = [[buttons[i], buttons[i+1]] if i+1 <
+                       len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
+        return message, buttons
+    except (bot_chat.ChatHubException, asyncio.TimeoutError) as exc:
+        if isinstance(exc, bot_chat.ChatHubException):
+            return str(exc), None
+        return bot_strings.TIMEOUT_ERROR_STRING, None
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private and not e.via_bot_id))
