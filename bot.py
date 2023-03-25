@@ -257,9 +257,18 @@ async def answer_callback_query(event):
         await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=None, style=user['style'])
         await settings_hanlder(event)
     if data == 'newtopic':
-        await bot_chat.clear_session(event.sender_id)
-        await event.edit(text=bot_strings.NEW_TOPIC_CREATED_STRING)
-        return
+        message = await event.get_message()
+        user = event.sender_id
+        if message:
+            user = await bot_db.get_user(userID=message.chat_id)
+            if not user:
+                user = await bot_db.get_user(chatID=message.chat_id)
+            if user:
+                user = user['id']
+        result = await bot_chat.clear_session(user)
+        if result:
+            await event.edit(text=bot_strings.NEW_TOPIC_CREATED_STRING)
+            return
     await event.answer()
 
 

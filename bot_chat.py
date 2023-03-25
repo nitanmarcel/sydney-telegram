@@ -35,6 +35,8 @@ def read_until_separator(message):
 async def clear_session(userID):
     if userID in MESSAGE_CREDS.keys():
         del MESSAGE_CREDS[userID]
+        return True
+    return False
 
 
 async def create_session(cookies):
