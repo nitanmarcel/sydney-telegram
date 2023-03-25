@@ -67,6 +67,7 @@ async def send_message(userID, message, cookies, style):
     global MESSAGE_CREDS
     chat_session = None
     answer = None
+    image_query = None
     is_error = False
     cards = []
     if userID not in MESSAGE_CREDS.keys():
@@ -149,21 +150,23 @@ async def send_message(userID, message, cookies, style):
                                 if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                                     answer = response['adaptiveCards'][-1]['body'][0]['text']
                         elif 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
-                            images, error = await bot_img.generate_image(userID, response['text'], cookies)
-                            if error:
-                                answer = error
-                                cards = None
-                                is_error = True
-                            else:
-                                answer = images
-                                cards = None
+                            image_query = response['text']
                         if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
                             del MESSAGE_CREDS[userID]
-                if answer:
+                if answer or image_query:
                     break
-        if not answer:
+    if image_query:
+        images, error = await bot_img.generate_image(userID, response['text'], cookies)
+        if error:
+            answer = error
+            cards = None
             is_error = True
-        return answer, cards, is_error
+        else:
+            answer = images
+            cards = None
+    if not answer:
+        is_error = True
+    return answer, cards, is_error
 
 
 async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, style, **kwargs):
