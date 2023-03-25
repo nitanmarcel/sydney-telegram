@@ -116,10 +116,11 @@ async def handle_chat_connect(event):
 async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None):
     message, buttons = None, None
     try:
-        message, cards = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
+        message, cards, is_error = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
         if not isinstance(message, list):
-            if not message:
+            if is_error:
                 message = bot_strings.PROCESSING_ERROR_STRING
+                buttons = [Button.inline(text='New topic', data='newtopic')]
             else:
                 message = parse_footnotes(message)
                 if cards:
@@ -255,6 +256,10 @@ async def answer_callback_query(event):
         user = await bot_db.get_user(event.sender_id)
         await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=None, style=user['style'])
         await settings_hanlder(event)
+    if data == 'newtopic':
+        await bot_chat.clear_session(event.sender_id)
+        await event.edit(text=bot_strings.NEW_TOPIC_CREATED_STRING)
+        return
     await event.answer()
 
 

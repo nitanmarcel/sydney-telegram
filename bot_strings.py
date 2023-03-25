@@ -107,3 +107,7 @@ INLINE_NO_COOKIE_STRING = """
 INLINE_PROCESSING_STRING = """
 ⚠️ Processing your query...
 """
+
+NEW_TOPIC_CREATED_STRING = """
+It's always great to start fresh. Ask me anything!
+"""
