@@ -132,7 +132,7 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
     return message, buttons
 
 
-@client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private))
+@client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private and not e.via_bot_id))
 async def message_handler_private(event):
     global STATES
     message = event.text
