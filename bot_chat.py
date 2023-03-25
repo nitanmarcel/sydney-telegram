@@ -153,6 +153,7 @@ async def send_message(userID, message, cookies, style):
                             image_query = response['text']
                         if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
                             del MESSAGE_CREDS[userID]
+                await asyncio.sleep(0)
                 if answer or image_query:
                     break
     if image_query:
