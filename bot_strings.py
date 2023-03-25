@@ -41,11 +41,11 @@ You can always log out by running the /start command and clicking on the Logout 
 """
 
 AUTHENTIFICATION_URL_NOT_VALID_STRING = """
-⚠️ Authentification url invalid!
+Authentification url invalid!
 """
 
 AUTHENTIFICATION_FAILED_STRING = """
-⚠️ Authentification failed!
+Authentification failed!
 """
 
 AUTHENTIFICATION_DONE_STRING = """
@@ -81,31 +81,35 @@ You must be an admin in the target chat, before connecting your account.
 """
 
 CHAT_ID_CONNECTED_BROADCAST_STRING = """
-⚠️ {} connected to this chat. Everyone can use the bot now!
+{} connected to this chat. Everyone can use the bot now!
 """
 
 NOT_IN_WHITELST_STRING = """
-⚠️ You don\'t have access to this service! Make sure you're accepted into the whitelist in the mobile application
+You don\'t have access to this service! Make sure you're accepted into the whitelist in the mobile application
 """
 
 TIMEOUT_ERROR_STRING = """
-⚠️ Request ended with timeout error. Try again later!
+Request ended with timeout error. Try again later!
 """
 
 PROCESSING_ERROR_STRING = """
-⚠️ There was an error processing your response! Try again later.
+There was an error processing your response! Try again later.
 """
 
 POCESSING_ALREADY_STRING = """
-⚠️ Processing of the last query didn't finished yet!
+Processing of the last query didn't finished yet!
+"""
+
+RATELIMIT_STRING = """
+Sorry, you've reached the limit of messages you can send to Bing within 24 hours. Check back soon!
 """
 
 INLINE_NO_COOKIE_STRING = """
-⚠️ Sorry, you need to login first to access this service.
+Sorry, you need to login first to access this service.
 """
 
 INLINE_PROCESSING_STRING = """
-⚠️ Processing your query...
+Processing your query...
 """
 
 NEW_TOPIC_CREATED_STRING = """
