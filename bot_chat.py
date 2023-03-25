@@ -80,8 +80,9 @@ async def send_message(userID, message, cookies, style):
             del MESSAGE_CREDS[userID]
             return await send_message(userID, message, cookies, style)
         chat_session['isStartOfSession'] = False
-
+    
     chat_session['question'] = message
+
     async with chat_session['semaphore']:
         message_payload = await build_message(**chat_session)
         async with websockets.connect(URL,
@@ -113,46 +114,47 @@ async def send_message(userID, message, cookies, style):
             ):
                 answer = "⚠️ Sorry, you've reached the limit of messages you can send to Bing within 24 hours. Check back soon!"
                 return answer, cards
+            
+            maxNumUserMessagesInConversation = 1000
+            numUserMessagesInConversation = 1
+            if 'throttling' in response.keys():
+                maxNumUserMessagesInConversation = js['item'][
+                    'throttling']['maxNumUserMessagesInConversation']
+                numUserMessagesInConversation = js['item']['throttling']['numUserMessagesInConversation']
             async for responses in ws:
                 js = json.loads(read_until_separator(responses))
                 if js['type'] == 2 and 'item' in js.keys():
                     item = js['item']
                     conversationExpiryTime = item['conversationExpiryTime']
                     conversationExpiryTime = dateparse(conversationExpiryTime)
-                    if pytz.utc.localize(datetime.now()) >= conversationExpiryTime:
+                    if pytz.utc.localize(datetime.now()) >= conversationExpiryTime or numUserMessagesInConversation >= maxNumUserMessagesInConversation:
                         del MESSAGE_CREDS[userID]
                         message, cards = await send_message(userID=userID, message=message, cookies=cookies, style=style)
                         return message, cards
-                    if 'throttling' in item.keys() and 'messages' in item.keys():
-                        maxNumUserMessagesInConversation = js['item'][
-                            'throttling']['maxNumUserMessagesInConversation']
-                        numUserMessagesInConversation = js['item']['throttling']['numUserMessagesInConversation']
-                        for response in item['messages']:
-                            if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
-                                answer = response['text']
-                                if 'adaptiveCards' in response.keys():
-                                    for _card in response['adaptiveCards']:
-                                        if _card['type'] == 'AdaptiveCard':
-                                            card = _card['body'][-1]['text']
-                                            markdown_pattern = re.findall(
-                                                r'\[(.*?)\]\((.*?)\)', card)
-                                            cards.extend(
-                                                iter(markdown_pattern))
-                                else:
-                                    if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
-                                        answer = response['adaptiveCards'][-1]['body'][0]['text']
-                            elif 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
-                                images, error = await bot_img.generate_image(userID, chat_session['question'], cookies)
-                                if error:
-                                    answer = error
-                                    cards = None
-                                else:
-                                    answer = images
-                                    cards = None
-                            if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
-                                del MESSAGE_CREDS[userID]
-                            if numUserMessagesInConversation >= (maxNumUserMessagesInConversation - 1) and userID in MESSAGE_CREDS:
-                                del MESSAGE_CREDS[userID]
+                    for response in item['messages']:
+                        if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
+                            answer = response['text']
+                            if 'adaptiveCards' in response.keys():
+                                for _card in response['adaptiveCards']:
+                                    if _card['type'] == 'AdaptiveCard':
+                                        card = _card['body'][-1]['text']
+                                        markdown_pattern = re.findall(
+                                            r'\[(.*?)\]\((.*?)\)', card)
+                                        cards.extend(
+                                            iter(markdown_pattern))
+                            else:
+                                if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                                    answer = response['adaptiveCards'][-1]['body'][0]['text']
+                        elif 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
+                            images, error = await bot_img.generate_image(userID, response['text'], cookies)
+                            if error:
+                                answer = error
+                                cards = None
+                            else:
+                                answer = images
+                                cards = None
+                        if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
+                            del MESSAGE_CREDS[userID]
                 if answer:
                     break
         return answer, cards
