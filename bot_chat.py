@@ -65,6 +65,7 @@ async def send_message(userID, message, cookies, style):
     global MESSAGE_CREDS
     chat_session = None
     answer = None
+    is_error = False
     cards = []
     if userID not in MESSAGE_CREDS.keys():
         chat_session, error = await create_session(cookies)
@@ -150,6 +151,7 @@ async def send_message(userID, message, cookies, style):
                             if error:
                                 answer = error
                                 cards = None
+                                is_error = True
                             else:
                                 answer = images
                                 cards = None
@@ -157,7 +159,9 @@ async def send_message(userID, message, cookies, style):
                             del MESSAGE_CREDS[userID]
                 if answer:
                     break
-        return answer, cards
+        if not answer:
+            is_error = True
+        return answer, cards, is_error
 
 
 async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, style, **kwargs):
