@@ -80,7 +80,6 @@ async def send_message(userID, message, cookies, style):
         chat_session['isStartOfSession'] = True
         chat_session['semaphore'] = asyncio.Semaphore(1)
         chat_session['style'] = style
-        chat_session['previousMessages'] = []
         MESSAGE_CREDS[userID] = chat_session
     else:
         chat_session = MESSAGE_CREDS[userID]
@@ -90,11 +89,10 @@ async def send_message(userID, message, cookies, style):
         chat_session['isStartOfSession'] = False
     
     chat_session['question'] = message
-    previousMessages = chat_session['previousMessages']
 
     async with chat_session['semaphore']:
         message_payload = await build_message(**chat_session)
-        async with websockets.connect(URL, ssl=True, ping_timeout=None) as ws:            
+        async for ws in websockets.connect(URL, ssl=True, ping_timeout=None):            
             await ws.send('{"protocol":"json","version":1}')
             await ws.recv()
             await ws.send('{"type":6}')
@@ -118,7 +116,6 @@ async def send_message(userID, message, cookies, style):
                             del MESSAGE_CREDS[userID]
                             return await send_message(userID=userID, message=message, cookies=cookies, style=style)
                     for response in item['messages']:
-                        previousMessages.append(response)
                         if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
                             answer = response['text']
                             if 'adaptiveCards' in response.keys():
@@ -137,7 +134,8 @@ async def send_message(userID, message, cookies, style):
                         if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
                             del MESSAGE_CREDS[userID]
                     break
-    chat_session['previousMessages'] = previousMessages
+            if answer or image_query:
+                break
     if image_query:
         answer, error = await bot_img.generate_image(userID, response['text'], cookies)
         if error:
@@ -147,7 +145,7 @@ async def send_message(userID, message, cookies, style):
     return answer, cards
 
 
-async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, style, previousMessages, **kwargs):
+async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, style, **kwargs):
     global MESSAGE_CREDS
     now = datetime.now()
     formatted_date = now.strftime('%Y-%m-%dT%H:%M:%S%z')
@@ -233,6 +231,4 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
     "target": "chat",
     "type": 4
     }
-    if len(previousMessages) > 0:
-        payload['arguments'][0]['previousMessages'] = previousMessages
     return payload
