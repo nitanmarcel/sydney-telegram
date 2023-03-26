@@ -96,6 +96,10 @@ PROCESSING_ERROR_STRING = """
 There was an error processing your response! Try again later.
 """
 
+CLOSE_MESSAGE_RECEIVED_STRING = """
+Close message received from server.
+"""
+
 POCESSING_ALREADY_STRING = """
 Processing of the last query didn't finished yet!
 """
