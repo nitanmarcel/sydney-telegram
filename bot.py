@@ -288,7 +288,7 @@ async def handle_inline_send(event):
     user = await bot_db.get_user(event.user_id)
     message, buttons, caption = await answer_builder(userId=event.user_id, query=event.query, style=user['style'], cookies=user['cookies'])
     if isinstance(message, list):
-        message = f'❓ {caption}\n\n' + '- ' + '\n- '.join([link.split('?')[0] for link in message])
+        message = '- ' + '\n- '.join([link.split('?')[0] for link in message])
     if buttons:
         await client.edit_message(event.msg_id, text=f'❓ {caption}\n\n' + message, buttons=buttons)
     else:
