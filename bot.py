@@ -123,11 +123,11 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
             buttons = [Button.url(card[0], card[1]) for card in cards]
             buttons = [[buttons[i], buttons[i+1]] if i+1 <
                        len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
-        return message, buttons
+        return message, buttons, query
     except (bot_chat.ChatHubException, asyncio.TimeoutError) as exc:
         if isinstance(exc, bot_chat.ChatHubException):
             return str(exc), None
-        return bot_strings.TIMEOUT_ERROR_STRING, None
+        return bot_strings.TIMEOUT_ERROR_STRING, None, None
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private and not e.via_bot_id))
@@ -161,7 +161,7 @@ async def message_handler_private(event):
         return
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
-            message, buttons = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
+            message, buttons, _ = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
                                                     cookies=user['cookies'])
             if not isinstance(message, list):
                 if buttons:
@@ -286,13 +286,13 @@ async def answer_inline_query(event):
 @client.on(events.Raw(UpdateBotInlineSend))
 async def handle_inline_send(event):
     user = await bot_db.get_user(event.user_id)
-    message, buttons = await answer_builder(userId=event.user_id, query=event.query, style=user['style'], cookies=user['cookies'])
+    message, buttons, caption = await answer_builder(userId=event.user_id, query=event.query, style=user['style'], cookies=user['cookies'])
     if isinstance(message, list):
-        message = '- ' + '\n- '.join([link.split('?')[0] for link in message])
+        message = f'❓ {caption}\n\n' + '- ' + '\n- '.join([link.split('?')[0] for link in message])
     if buttons:
-        await client.edit_message(event.msg_id, text=message, buttons=buttons)
+        await client.edit_message(event.msg_id, text=f'❓ {caption}\n\n' + message, buttons=buttons)
     else:
-        await client.edit_message(event.msg_id, text=message)
+        await client.edit_message(event.msg_id, text=f'❓ {caption}\n\n' + message)
 
 
 @client.on(events.Raw(UpdateBotStopped))
@@ -314,10 +314,10 @@ async def message_handler_groups(event):
     message = event.text.replace(
         f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
     if not user:
-        message, buttons = await answer_builder(chatID=event.sender_id, query=message, style=bot_chat.Style.BALANCED, cookies=None)
+        message, buttons, _ = await answer_builder(chatID=event.sender_id, query=message, style=bot_chat.Style.BALANCED, cookies=None)
         await event.reply(f'⚠️ {message}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
         return
-    message, buttons = await answer_builder(chatID=event.sender_id, query=message, style=user['style'], cookies=user['cookies'] if user else None)
+    message, buttons, _ = await answer_builder(chatID=event.sender_id, query=message, style=user['style'], cookies=user['cookies'] if user else None)
     if not isinstance(message, list):
         if buttons:
             await event.reply(message, buttons=buttons)
