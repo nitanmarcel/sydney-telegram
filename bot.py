@@ -126,7 +126,7 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
         return message, buttons, query
     except (bot_chat.ChatHubException, asyncio.TimeoutError) as exc:
         if isinstance(exc, bot_chat.ChatHubException):
-            return str(exc), None
+            return str(exc), None, query
         return bot_strings.TIMEOUT_ERROR_STRING, None, None
 
 
