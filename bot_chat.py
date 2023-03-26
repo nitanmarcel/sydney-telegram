@@ -90,9 +90,18 @@ async def send_message(userID, message, cookies, style):
     
     chat_session['question'] = message
 
+    ws_messages = []
+
     async with chat_session['semaphore']:
         message_payload = await build_message(**chat_session)
-        async for ws in websockets.connect(URL, ssl=True, ping_timeout=None):            
+        async with websockets.connect(URL, ssl=True, ping_timeout=None,
+                                      extensions=[
+                                          websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
+                                                      server_max_window_bits=11,
+                                                      client_max_window_bits=11,
+                                                      compress_settings={
+                                                          'memLevel': 4},
+                                          ), ]) as ws:            
             await ws.send('{"protocol":"json","version":1}')
             await ws.recv()
             await ws.send('{"type":6}')
@@ -103,39 +112,39 @@ async def send_message(userID, message, cookies, style):
                 if response['item']['result']['value'] == 'Throttled':
                     raise ChatHubException(bot_strings.RATELIMIT_STRING)
             async for responses in ws:
-                js = json.loads(read_until_separator(responses))
-                if js['type'] == 2:
-                    item = js['item']
-                    conversationExpiryTime = item['conversationExpiryTime']
-                    conversationExpiryTime = dateparse(conversationExpiryTime)
-                    if 'throttling' in item.keys() and 'messages' in item.keys():
-                        maxNumUserMessagesInConversation = js['item'][
-                            'throttling']['maxNumUserMessagesInConversation']
-                        numUserMessagesInConversation = js['item']['throttling']['numUserMessagesInConversation']
-                        if pytz.utc.localize(datetime.now()) >= conversationExpiryTime or numUserMessagesInConversation >= maxNumUserMessagesInConversation:
-                            del MESSAGE_CREDS[userID]
-                            return await send_message(userID=userID, message=message, cookies=cookies, style=style)
-                    for response in item['messages']:
-                        if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
-                            answer = response['text']
-                            if 'adaptiveCards' in response.keys():
-                                for _card in response['adaptiveCards']:
-                                    if _card['type'] == 'AdaptiveCard':
-                                        card = _card['body'][-1]['text']
-                                        markdown_pattern = re.findall(
-                                            r'\[(.*?)\]\((.*?)\)', card)
-                                        cards.extend(
-                                            iter(markdown_pattern))
-                            else:
-                                if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
-                                    answer = response['adaptiveCards'][-1]['body'][0]['text']
-                        elif 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
-                            image_query = response['text']
-                        if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
-                            del MESSAGE_CREDS[userID]
-                    break
-            if answer or image_query:
-                break
+                ws_messages.append(responses)
+    if ws_messages:
+        for responses in ws_messages:
+            js = json.loads(read_until_separator(responses))
+            if js['type'] == 2:
+                item = js['item']
+                conversationExpiryTime = item['conversationExpiryTime']
+                conversationExpiryTime = dateparse(conversationExpiryTime)
+                if 'throttling' in item.keys() and 'messages' in item.keys():
+                    maxNumUserMessagesInConversation = js['item'][
+                        'throttling']['maxNumUserMessagesInConversation']
+                    numUserMessagesInConversation = js['item']['throttling']['numUserMessagesInConversation']
+                    if pytz.utc.localize(datetime.now()) >= conversationExpiryTime or numUserMessagesInConversation >= maxNumUserMessagesInConversation:
+                        del MESSAGE_CREDS[userID]
+                        return await send_message(userID=userID, message=message, cookies=cookies, style=style)
+                for response in item['messages']:
+                    if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
+                        answer = response['text']
+                        if 'adaptiveCards' in response.keys():
+                            for _card in response['adaptiveCards']:
+                                if _card['type'] == 'AdaptiveCard':
+                                    card = _card['body'][-1]['text']
+                                    markdown_pattern = re.findall(
+                                        r'\[(.*?)\]\((.*?)\)', card)
+                                    cards.extend(
+                                        iter(markdown_pattern))
+                        else:
+                            if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                                answer = response['adaptiveCards'][-1]['body'][0]['text']
+                    elif 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
+                        image_query = response['text']
+                    if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
+                        del MESSAGE_CREDS[userID]
     if image_query:
         answer, error = await bot_img.generate_image(userID, response['text'], cookies)
         if error:
