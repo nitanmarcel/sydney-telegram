@@ -127,7 +127,7 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
     except (bot_chat.ChatHubException, asyncio.TimeoutError) as exc:
         if isinstance(exc, bot_chat.ChatHubException):
             return str(exc), None, query
-        return bot_strings.TIMEOUT_ERROR_STRING, None, None
+        return bot_strings.TIMEOUT_ERROR_STRING, None, query
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private and not e.via_bot_id))
@@ -280,7 +280,7 @@ async def answer_inline_query(event):
     if not user:
         await event.answer(switch_pm=bot_strings.INLINE_NO_COOKIE_STRING, switch_pm_param='start')
         return
-    await event.answer([builder.article('Click me', text=f'❓ {message}', buttons=[Button.inline('Please wait...')])])
+    await event.answer([builder.article('Click me', text=f'❓ __{message}__', buttons=[Button.inline('Please wait...')])])
 
 
 @client.on(events.Raw(UpdateBotInlineSend))
@@ -290,9 +290,9 @@ async def handle_inline_send(event):
     if isinstance(message, list):
         message = '- ' + '\n- '.join([link.split('?')[0] for link in message])
     if buttons:
-        await client.edit_message(event.msg_id, text=f'❓ {caption}\n\n' + message, buttons=buttons)
+        await client.edit_message(event.msg_id, text=f'❓ __{caption}__\n\n' + message, buttons=buttons)
     else:
-        await client.edit_message(event.msg_id, text=f'❓ {caption}\n\n' + message)
+        await client.edit_message(event.msg_id, text=f'❓ __{caption}__\n\n' + message)
 
 
 @client.on(events.Raw(UpdateBotStopped))
