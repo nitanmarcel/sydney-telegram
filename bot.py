@@ -126,8 +126,8 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
         return message, buttons, query
     except (bot_chat.ChatHubException, asyncio.TimeoutError) as exc:
         if isinstance(exc, bot_chat.ChatHubException):
-            return str(exc), None, query
-        return bot_strings.TIMEOUT_ERROR_STRING, None, query
+            return str(exc), Button.inline(text='New Topic', data='newtopic'), query
+        return bot_strings.TIMEOUT_ERROR_STRING, Button.inline(text='New Topic', data='newtopic'), query
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private and not e.via_bot_id))
