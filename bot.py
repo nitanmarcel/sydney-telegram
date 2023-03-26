@@ -56,9 +56,9 @@ async def start_handler(event):
              Button.inline(text='Donate', data='donate')],
             [Button.inline(text='Source Code', data='donate')],
         ]
-    if hasattr(event, 'out') and event.out:
+    if not hasattr(event, 'out'):
         await event.edit(bot_strings.FIRST_START_STRING, buttons=buttons)
-    else:
+    elif not event.out:
         await client.send_message(event.chat_id, bot_strings.FIRST_START_STRING, buttons=buttons)
 
 
