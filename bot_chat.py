@@ -94,7 +94,8 @@ async def send_message(userID, message, cookies, style):
 
     async with chat_session['semaphore']:
         message_payload = await build_message(**chat_session)
-        async with websockets.connect(URL, ssl=True, ping_timeout=None,
+        async with websockets.connect(URL, ssl=True, ping_timeout=None, 
+                                      ping_interval=None,
                                       extensions=[
                                           websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
                                                       server_max_window_bits=11,
@@ -112,10 +113,16 @@ async def send_message(userID, message, cookies, style):
                 if response['item']['result']['value'] == 'Throttled':
                     raise ChatHubException(bot_strings.RATELIMIT_STRING)
             async for responses in ws:
-                ws_messages.append(responses)
+                js = json.loads(read_until_separator(responses))
+                if js['type'] == 6:
+                    await ws.send('{"type":6}')
+                if js['type'] == 2 or js['type'] == 3:
+                    ws_messages.append(js)
+                    break
+                if js['type'] == 7:
+                    raise ChatHubException(bot_strings.CLOSE_MESSAGE_RECEIVED_STRING)
     if ws_messages:
         for responses in ws_messages:
-            js = json.loads(read_until_separator(responses))
             if js['type'] == 2:
                 item = js['item']
                 conversationExpiryTime = item['conversationExpiryTime']
