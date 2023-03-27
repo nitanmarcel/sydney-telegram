@@ -292,9 +292,10 @@ async def answer_inline_query(event):
 
     if suggestions:
         for suggestion in suggestions:
-            INLINE_QUERIES_TEXT[event.sender_id].update({suggestion['id']: suggestion['query']})
             message = suggestion['query']
-            articles.append(builder.article(message, text=f'❓ __{message}__', buttons=[Button.inline('Please wait...')], id=suggestion['id']))
+            if event.text != message:
+                INLINE_QUERIES_TEXT[event.sender_id].update({suggestion['id']: message})
+                articles.append(builder.article(message, text=f'❓ __{message}__', buttons=[Button.inline('Please wait...')], id=suggestion['id']))
         
     await event.answer(articles)
 
