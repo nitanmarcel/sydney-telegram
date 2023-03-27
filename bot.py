@@ -16,6 +16,7 @@ import bot_config
 import bot_db
 import bot_oauth
 import bot_strings
+import bot_suggestions
 
 
 class State(Enum):
@@ -29,6 +30,9 @@ class State(Enum):
 
 
 STATES = {}
+
+
+INLINE_QUERIES_TEXT = {}
 
 logging.basicConfig(level=logging.INFO)
 
@@ -272,6 +276,8 @@ async def answer_callback_query(event):
 
 @client.on(events.InlineQuery())
 async def answer_inline_query(event):
+    global INLINE_QUERIES_TEXT
+    INLINE_QUERIES_TEXT[event.sender_id] = {}
     message = event.text
     if not message:
         return
@@ -280,13 +286,27 @@ async def answer_inline_query(event):
     if not user:
         await event.answer(switch_pm=bot_strings.INLINE_NO_COOKIE_STRING, switch_pm_param='start')
         return
-    await event.answer([builder.article('Click me', text=f'❓ __{message}__', buttons=[Button.inline('Please wait...')])])
+    
+    suggestions = await bot_suggestions.get_suggestions(message)
+    articles = [builder.article(message, text=f'❓ __{message}__', buttons=[Button.inline('Please wait...')])]
+
+    if suggestions:
+        for suggestion in suggestions:
+            INLINE_QUERIES_TEXT[event.sender_id].update({suggestion['id']: suggestion['query']})
+            message = suggestion['query']
+            articles.append(builder.article(message, text=f'❓ __{message}__', buttons=[Button.inline('Please wait...')], id=suggestion['id']))
+        
+    await event.answer(articles)
 
 
 @client.on(events.Raw(UpdateBotInlineSend))
 async def handle_inline_send(event):
     user = await bot_db.get_user(event.user_id)
-    message, buttons, caption = await answer_builder(userId=event.user_id, query=event.query, style=user['style'], cookies=user['cookies'])
+    query = event.query
+    if event.id in INLINE_QUERIES_TEXT[event.user_id]:
+        suggestions = INLINE_QUERIES_TEXT[event.user_id]
+        query = suggestions[event.id]
+    message, buttons, caption = await answer_builder(userId=event.user_id, query=query, style=user['style'], cookies=user['cookies'])
     if isinstance(message, list):
         message = '- ' + '\n- '.join([link.split('?')[0] for link in message])
     if buttons:

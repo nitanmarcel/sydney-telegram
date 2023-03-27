@@ -13,6 +13,11 @@ TELEGRAM_BOT_USERNAME = ''
 # It's not shared with the public to prevent abuse. If you got your hands on it, it's your responsability how you use it.
 SYDNEY_CLIENT_ID = 0
 
+# Enables suggestions in inline queries
+# Same as with the client id, I preffer to not share it to the public, or even mention how to get it. And the same as above
+# If you got your hands on it, it's your responsability how you use it.
+SUGGESTIONS_API_KEY = ''
+
 # Postgres database connection string
 POSTGRES_CONNECTION_STRING = ''
 
