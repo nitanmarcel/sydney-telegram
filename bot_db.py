@@ -58,7 +58,7 @@ async def init(dbstring, encryption_key):
     global ENCRYPTION_KEY
     global USERS, ENCRYPTION_KEY
     if not encryption_key:
-        ENCRYPTION_KEY = generate_key()
+        ENCRYPTION_KEY = _generate_key()
     else:
         ENCRYPTION_KEY = encryption_key
 
