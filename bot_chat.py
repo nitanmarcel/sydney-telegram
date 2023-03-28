@@ -148,12 +148,12 @@ async def send_message(userID, message, cookies, style):
                         else:
                             if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                                 answer = response['adaptiveCards'][-1]['body'][0]['text']
-                    elif 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
+                    if 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
                         image_query = response['text']
+                    if 'contentOrigin' in response.keys() and response['contentOrigin'] == 'Apology':
+                        answer = response['adaptiveCards'][0]['body'][0]['text']
                     if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
                         del MESSAGE_CREDS[userID]
-                    if response['contentOrigin'] == 'Apology':
-                        answer = response['adaptiveCards'][0]['body'][0]['text']
     if image_query:
         answer, error = await bot_img.generate_image(userID, response['text'], cookies)
         if error:
