@@ -21,6 +21,7 @@ URL = 'wss://sydney.bing.com/sydney/ChatHub'
 class ChatHubException(Exception):
     pass
 
+
 class Style(Enum):
     CREATIVE = 1
     BALANCED = 2
@@ -42,10 +43,12 @@ async def clear_session(userID):
         return True
     return False
 
+
 async def get_session(userID):
     if userID in MESSAGE_CREDS.keys():
         return MESSAGE_CREDS[userID]
     return None
+
 
 async def create_session(cookies):
     chat_session = {}
@@ -92,22 +95,22 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
             del MESSAGE_CREDS[userID]
             return await send_message(userID, message, cookies, style)
         chat_session['isStartOfSession'] = False
-    
+
     chat_session['question'] = message
 
     ws_messages = []
 
     async with chat_session['semaphore']:
         message_payload = await build_message(**chat_session)
-        async with websockets.connect(URL, ssl=True, ping_timeout=None, 
+        async with websockets.connect(URL, ssl=True, ping_timeout=None,
                                       ping_interval=None,
                                       extensions=[
                                           websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
-                                                      server_max_window_bits=11,
-                                                      client_max_window_bits=11,
-                                                      compress_settings={
-                                                          'memLevel': 4},
-                                          ), ]) as ws:            
+                                              server_max_window_bits=11,
+                                              client_max_window_bits=11,
+                                              compress_settings={
+                                                  'memLevel': 4},
+                                          ), ]) as ws:
             await ws.send('{"protocol":"json","version":1}')
             await ws.recv()
             await ws.send('{"type":6}')
@@ -128,7 +131,8 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                     if js['allowReconnect'] and retry_on_disconnect:
                         try_again = True
                         break
-                    raise ChatHubException(bot_strings.CLOSE_MESSAGE_RECEIVED_STRING)
+                    raise ChatHubException(
+                        bot_strings.CLOSE_MESSAGE_RECEIVED_STRING)
     if try_again:
         return await send_message(userID=userID, message=message, cookies=cookies, style=style, retry_on_disconnect=False)
     if ws_messages:
@@ -194,69 +198,70 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
         optionsSets.extend(['h3imaginative', 'dv3sugg',
                            'clgalileo', 'gencontentv3'])
     if style == Style.BALANCED:
-        optionsSets.extend(['galileo', 'glprompt', 'newspoleansgnd', 'dv3sugg'])
+        optionsSets.extend(
+            ['galileo', 'glprompt', 'newspoleansgnd', 'dv3sugg'])
     if style == Style.PRECISE:
         optionsSets.extend(
             ['h3precise', 'dv3sugg', 'clgalileo'])
 
     payload = {
-    "arguments": [
-        {
-        "source": "cib",
-        "optionsSets": optionsSets,
-        "allowedMessageTypes": [
-            "Chat",
-            "InternalSearchQuery",
-            "InternalSearchResult",
-            "Disengaged",
-            "InternalLoaderMessage",
-            "RenderCardRequest",
-            "AdsQuery",
-            "SemanticSerp",
-            "GenerateContentQuery",
-            "SearchQuery"
+        "arguments": [
+            {
+                "source": "cib",
+                "optionsSets": optionsSets,
+                "allowedMessageTypes": [
+                    "Chat",
+                    "InternalSearchQuery",
+                    "InternalSearchResult",
+                    "Disengaged",
+                    "InternalLoaderMessage",
+                    "RenderCardRequest",
+                    "AdsQuery",
+                    "SemanticSerp",
+                    "GenerateContentQuery",
+                    "SearchQuery"
+                ],
+                "sliceIds": [
+                    "styleord",
+                    "321bic62up",
+                    "321bic62",
+                    "styleqnatg",
+                    "creatorv2c",
+                    "sydpaycontrol",
+                    "toneexpcf",
+                    "321toppfp3pp3",
+                    "323frep",
+                    "303hubcancls0",
+                    "320newspole",
+                    "321prompt97s0",
+                    "321slocs0",
+                    "316e2ecache"
+                ],
+                "verbosity": "verbose",
+                "traceId": str(traceID),
+                "isStartOfSession": isStartOfSession,
+                "message": {
+                    "locale": "en-US",
+                    "market": "en-US",
+                    "region": "WW",
+                    "location": "",
+                    "locationHints": [
+                    ],
+                    "timestamp": formatted_date,
+                    "author": "user",
+                    "inputMethod": "Keyboard",
+                    "text": question,
+                    "messageType": "Chat"
+                },
+                "conversationSignature": conversationSignature,
+                "participant": {
+                    "id": clientID
+                },
+                "conversationId": conversationId,
+            }
         ],
-        "sliceIds": [
-            "styleord",
-            "321bic62up",
-            "321bic62",
-            "styleqnatg",
-            "creatorv2c",
-            "sydpaycontrol",
-            "toneexpcf",
-            "321toppfp3pp3",
-            "323frep",
-            "303hubcancls0",
-            "320newspole",
-            "321prompt97s0",
-            "321slocs0",
-            "316e2ecache"
-        ],
-        "verbosity": "verbose",
-        "traceId": str(traceID),
-        "isStartOfSession": isStartOfSession,
-        "message": {
-            "locale": "en-US",
-            "market": "en-US",
-            "region": "WW",
-            "location": "",
-            "locationHints": [
-            ],
-            "timestamp": formatted_date,
-            "author": "user",
-            "inputMethod": "Keyboard",
-            "text": question,
-            "messageType": "Chat"
-        },
-        "conversationSignature": conversationSignature,
-        "participant": {
-            "id": clientID
-        },
-        "conversationId": conversationId,
-        }
-    ],
-    "invocationId": "2",
-    "target": "chat",
-    "type": 4
+        "invocationId": "2",
+        "target": "chat",
+        "type": 4
     }
     return payload

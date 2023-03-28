@@ -168,7 +168,7 @@ async def message_handler_private(event):
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
             message, buttons, _ = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
-                                                    cookies=user['cookies'], can_swipe_topics=True)
+                                                       cookies=user['cookies'], can_swipe_topics=True)
             if not isinstance(message, list):
                 await event.reply(message, buttons=buttons)
             else:
@@ -293,17 +293,20 @@ async def answer_inline_query(event):
     if not user:
         await event.answer(switch_pm=bot_strings.INLINE_NO_COOKIE_STRING, switch_pm_param='start')
         return
-    
+
     suggestions = await bot_suggestions.get_suggestions(message)
-    articles = [builder.article(message, text=f'❓ __{message}__', buttons=[Button.inline('Please wait...')])]
+    articles = [builder.article(message, text=f'❓ __{message}__', buttons=[
+                                Button.inline('Please wait...')])]
 
     if suggestions:
         for suggestion in suggestions:
             message = suggestion['query']
             if event.text != message:
-                INLINE_QUERIES_TEXT[event.sender_id].update({suggestion['id']: message})
-                articles.append(builder.article(message, text=f'❓ __{message}__', buttons=[Button.inline('Please wait...')], id=suggestion['id']))
-        
+                INLINE_QUERIES_TEXT[event.sender_id].update(
+                    {suggestion['id']: message})
+                articles.append(builder.article(message, text=f'❓ __{message}__', buttons=[
+                                Button.inline('Please wait...')], id=suggestion['id']))
+
     await event.answer(articles)
 
 
