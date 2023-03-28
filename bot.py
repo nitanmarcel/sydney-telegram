@@ -189,7 +189,7 @@ async def message_handler_private(event):
         auth_code = parse_qs(parsed_auth_url.query)['code'][0]
         cookies, has_sydney = await bot_oauth.auth(auth_code, bot_config.SYDNEY_CLIENT_ID)
         if not has_sydney:
-            await event.reply(bot_strings.NOT_IN_WHITELST_STRING)
+            await event.reply(bot_strings.NOT_IN_WHITELST_STRING, buttons=[Button.url('Join', 'https://www.bing.com/new')])
             STATES[event.sender_id] = State.FIRST_START
             return
         if not cookies:
