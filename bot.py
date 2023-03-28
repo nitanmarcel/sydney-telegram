@@ -127,10 +127,10 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
             buttons = [Button.url(card[0], card[1]) for card in cards]
             buttons = [[buttons[i], buttons[i+1]] if i+1 <
                        len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
-        buttons.append([Button.inline(text='New Topic', data='newtopic')])
+        buttons.append([Button.inline(text='New Topic', data=f'newtopic_{userId}')])
         return message, buttons, query
     except (bot_chat.ChatHubException, asyncio.TimeoutError) as exc:
-        buttons = [Button.inline(text='New Topic', data='newtopic')]
+        buttons = [Button.inline(text='New Topic', data=f'newtopic_{userId}')]
         if isinstance(exc, bot_chat.ChatHubException):
             return str(exc), buttons, query
         return bot_strings.TIMEOUT_ERROR_STRING, buttons, query
@@ -260,27 +260,25 @@ async def answer_callback_query(event):
         user = await bot_db.get_user(event.sender_id)
         await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=None, style=user['style'])
         await settings_hanlder(event)
-    if data == 'newtopic':
-        original_message = await event.get_message()
-        message = original_message
-        if message and bool(message.reply_to_msg_id):
-            message = await message.get_reply_message()
-        if message and message.sender_id == event.sender_id:
-            user = await bot_db.get_user(message.sender_id)
-            if not user:
-                user = await bot_db.get_user(chatID=message.sender_id)
-            if user:
-                user_id = user['id']
-                result = await bot_chat.clear_session(user_id)
-                if result:
-                    buttons = original_message.buttons
-                    if buttons:
-                        buttons = buttons[:-1]
-                    await event.edit(original_message.text, buttons=buttons or None)
-                    await event.answer(bot_strings.NEW_TOPIC_CREATED_STRING)
+    if data.startswith('newtopic'):
+        user_id = int(data.split('_')[-1])
+        message = await event.get_message()
+        if message:
+            if bool(message.reply_to_msg_id):
+                message = await message.get_reply_message()
+            user_id = message.sender_id
+        if user_id == event.sender_id:
+            user = await bot_db.get_user(user_id)
+            if not user and message:
+                user = await bot_db.get_user(chatID=message.chat_id)
+            user_id = user['id']
+            result = await bot_chat.clear_session(user_id)
+            if result:
+                await event.answer(bot_strings.NEW_TOPIC_CREATED_STRING)
+                return
         await event.answer('Topic has expired, or you are not the sender of the original message.', alert=True)
         return
-    #await event.answer()
+    await event.answer()
 
 
 @client.on(events.InlineQuery())
