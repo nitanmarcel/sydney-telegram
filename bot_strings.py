@@ -3,7 +3,7 @@ Welcome to our Chat-GPT-4 powered Telegram bot! To start, please click the "Star
 
 If you'd like to support our bot, please click the "Donate" button below. This will open another message with links you can use to donate. 
 
-Thank you for choosing our bot!
+Thank you for choosing our bot.
 """
 
 AGREEMENT_STRING = """
@@ -11,7 +11,6 @@ By using our Chat-GPT-4 powered Telegram bot, you agree to the following:
 
 - You are responsible for how you use the bot and any consequences that may result from your actions.
 - We are not responsible for any account bans or other issues that may arise as a result of using the bot.
-- You agree to allow us to use the required information to 
 """
 
 DONATION_STRING = """
@@ -41,21 +40,21 @@ You can always log out by running the /start command and clicking on the Logout 
 """
 
 AUTHENTIFICATION_URL_NOT_VALID_STRING = """
-Authentification url invalid!
+Authentification url invalid.
 """
 
 AUTHENTIFICATION_FAILED_STRING = """
-Authentification failed!
+Authentification failed.
 """
 
 AUTHENTIFICATION_DONE_STRING = """
-Authentification completed!
+Authentification completed.
 
 Here, you can ask me anything you want!
 
 There are also two other modes you can use to ask me questions:
 
-- Inline mode: To use inline mode, simply mention my name in any chat and type your question, ending with a question mark, exclamation mark or period. For example, "@{} What is the capital of France?" I'll respond to your question right away!
+- Inline mode: To use inline mode, simply mention my name in any chat and type your question, ending with a question mark, exclamation mark or period. For example, "@{} What is the capital of France?" I'll respond to your question right away.
 
 - Group mode: To use group mode, mention me or reply to one of my messages in a group chat. Remember that you'll need to be authenticated to use this mode. Once you're authenticated, you can ask me anything you want and I'll do my best to answer your question.
 
@@ -64,7 +63,7 @@ There are also two other modes you can use to ask me questions:
 SETTINGS_STRING = """
 Here you can change your bot settings.
 
-- Style: Choose a conversation style, between Creative, Balanced and Precise
+- Style: Choose a conversation style, between Creative, Balanced and Precise.
 - Chat: Connect up to a chat that can conversate with the bot on your behalf. You need to be admin in the respective chat.
 """
 
@@ -73,7 +72,7 @@ Enter the id of the chat you want to connect to.
 """
 
 INVALID_CHAT_ID_STRING = """
-The id of the entered chat is invalid!
+The id of the entered chat is invalid.
 """
 
 CHAT_CONNECT_NOT_ADMIN_STRING = """
@@ -81,15 +80,15 @@ You must be an admin in the target chat, before connecting your account.
 """
 
 CHAT_ID_CONNECTED_BROADCAST_STRING = """
-{} connected to this chat. Everyone can use the bot now!
+{} connected to this chat. Everyone in this chat can use the bot now.
 """
 
 NOT_IN_WHITELST_STRING = """
-You don\'t have access to this service! Make sure you're accepted into the whitelist in the mobile application
+You don\'t have access to this service! Make sure you joined and you are accepted in the waitlist.
 """
 
 TIMEOUT_ERROR_STRING = """
-Request ended with timeout error. Try again later!
+Request ended with timeout error. Try again later.
 """
 
 PROCESSING_ERROR_STRING = """
@@ -101,11 +100,11 @@ Close message received from server.
 """
 
 POCESSING_ALREADY_STRING = """
-Processing of the last query didn't finished yet!
+Processing of the last query didn't finished yet.
 """
 
 RATELIMIT_STRING = """
-Sorry, you've reached the limit of messages you can send to Bing within 24 hours. Check back soon!
+Sorry, you've reached the limit of messages you can send to Bing within 24 hours. Check back soon.
 """
 
 INLINE_NO_COOKIE_STRING = """
@@ -117,5 +116,5 @@ Processing your query...
 """
 
 NEW_TOPIC_CREATED_STRING = """
-It's always great to start fresh. Ask me anything!
+It's always great to start fresh. Ask me anything.
 """
