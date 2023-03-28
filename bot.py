@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import re
-import time
+import uuid
 from enum import Enum
 from urllib.parse import parse_qs, urlparse
 
@@ -117,7 +117,7 @@ async def handle_chat_connect(event):
     await event.edit(bot_strings.CHAT_CONNECT_STRING, buttons=Button.inline('Back', 'back'))
 
 
-async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None):
+async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False):
     try:
         buttons = []
         message, cards = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
@@ -127,13 +127,13 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
             buttons = [Button.url(card[0], card[1]) for card in cards]
             buttons = [[buttons[i], buttons[i+1]] if i+1 <
                        len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
-        buttons.append([Button.inline(text='New Topic', data=f'newtopic_{userId}')])
+        if can_swipe_topics:
+            buttons.append([Button.inline(text='New Topic', data='newtopic')])
         return message, buttons, query
     except (bot_chat.ChatHubException, asyncio.TimeoutError) as exc:
-        buttons = [Button.inline(text='New Topic', data=f'newtopic_{userId}')]
         if isinstance(exc, bot_chat.ChatHubException):
-            return str(exc), buttons, query
-        return bot_strings.TIMEOUT_ERROR_STRING, buttons, query
+            return str(exc), None, query
+        return bot_strings.TIMEOUT_ERROR_STRING, None, query
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private and not e.via_bot_id))
@@ -168,14 +168,11 @@ async def message_handler_private(event):
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
             message, buttons, _ = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
-                                                    cookies=user['cookies'])
+                                                    cookies=user['cookies'], can_swipe_topics=True)
             if not isinstance(message, list):
-                if buttons:
-                    await event.reply(message, buttons=buttons)
-                else:
-                    await event.reply(message)
+                await event.reply(message, buttons=buttons)
             else:
-                await event.reply(file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in message])
+                await event.reply(file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in message], buttons=buttons)
         return
     state = STATES[event.sender_id]
     if state == State.FIRST_START:
@@ -260,22 +257,24 @@ async def answer_callback_query(event):
         user = await bot_db.get_user(event.sender_id)
         await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=None, style=user['style'])
         await settings_hanlder(event)
-    if data.startswith('newtopic'):
-        user_id = int(data.split('_')[-1])
-        message = await event.get_message()
+    if data == 'newtopic':
+        original_message = await event.get_message()
+        message = original_message
         if message:
             if bool(message.reply_to_msg_id):
                 message = await message.get_reply_message()
-            user_id = message.sender_id
-        if user_id == event.sender_id:
-            user = await bot_db.get_user(user_id)
-            if not user and message:
-                user = await bot_db.get_user(chatID=message.chat_id)
-            user_id = user['id']
-            result = await bot_chat.clear_session(user_id)
-            if result:
-                await event.answer(bot_strings.NEW_TOPIC_CREATED_STRING)
-                return
+            if message.sender_id == message.sender_id:
+                user = await bot_db.get_user(message.sender_id)
+                if not user:
+                    user = await bot_db.get_user(chatID=message.chat_id)
+                if user:
+                    await bot_chat.clear_session(user['id'])
+                    buttons = None
+                    if original_message.buttons and len(original_message.buttons) > 1:
+                        buttons = original_message.buttons[:-1]
+                    await event.edit(text=original_message.text, file=original_message.file, buttons=buttons)
+                    await event.answer(bot_strings.NEW_TOPIC_CREATED_STRING)
+                    return
         await event.answer('Topic has expired, or you are not the sender of the original message.', alert=True)
         return
     await event.answer()
@@ -284,11 +283,12 @@ async def answer_callback_query(event):
 @client.on(events.InlineQuery())
 async def answer_inline_query(event):
     global INLINE_QUERIES_TEXT
-    INLINE_QUERIES_TEXT[event.sender_id] = {}
     message = event.text
-    if not message:
-        return
     builder = event.builder
+    if not message and bool((await bot_chat.get_session(event.sender_id))):
+        await event.answer([builder.article('Start new topic', text=bot_strings.NEW_TOPIC_CREATED_STRING, id=f'{uuid.uuid4()}_newtopic')])
+        return
+    INLINE_QUERIES_TEXT[event.sender_id] = {}
     user = await bot_db.get_user(event.sender_id)
     if not user:
         await event.answer(switch_pm=bot_strings.INLINE_NO_COOKIE_STRING, switch_pm_param='start')
@@ -311,6 +311,9 @@ async def answer_inline_query(event):
 async def handle_inline_send(event):
     user = await bot_db.get_user(event.user_id)
     query = event.query
+    if event.id.endswith('_newtopic'):
+        await bot_chat.clear_session(event.user_id)
+        return
     if event.id in INLINE_QUERIES_TEXT[event.user_id]:
         suggestions = INLINE_QUERIES_TEXT[event.user_id]
         query = suggestions[event.id]
@@ -345,14 +348,11 @@ async def message_handler_groups(event):
         message, buttons, _ = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None)
         await event.reply(f'⚠️ {message}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
         return
-    message, buttons, _ = await answer_builder(userId=user['id'], query=message, style=user['style'], cookies=user['cookies'] if user else None)
+    message, buttons, _ = await answer_builder(userId=user['id'], query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True)
     if not isinstance(message, list):
-        if buttons:
-            await event.reply(message, buttons=buttons)
-        else:
-            await event.reply(message)
+        await event.reply(message, buttons=buttons)
     else:
-        await event.reply(file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in message])
+        await event.reply(file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in message], buttons=buttons)
 
 
 async def main():

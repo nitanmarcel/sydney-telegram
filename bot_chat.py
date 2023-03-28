@@ -42,6 +42,10 @@ async def clear_session(userID):
         return True
     return False
 
+async def get_session(userID):
+    if userID in MESSAGE_CREDS.keys():
+        return MESSAGE_CREDS[userID]
+    return None
 
 async def create_session(cookies):
     chat_session = {}
