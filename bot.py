@@ -288,6 +288,8 @@ async def answer_inline_query(event):
     if not message and bool((await bot_chat.get_session(event.sender_id))):
         await event.answer([builder.article('Start new topic', text=bot_strings.NEW_TOPIC_CREATED_STRING, id=f'{uuid.uuid4()}_newtopic')])
         return
+    elif not message:
+        return
     INLINE_QUERIES_TEXT[event.sender_id] = {}
     user = await bot_db.get_user(event.sender_id)
     if not user:
