@@ -67,11 +67,12 @@ async def create_session(cookies):
     return chat_session, error
 
 
-async def send_message(userID, message, cookies, style):
+async def send_message(userID, message, cookies, style, retry_on_disconnect=True):
     global MESSAGE_CREDS
     chat_session = None
     answer = None
     image_query = None
+    try_again = False
     cards = []
     if userID not in MESSAGE_CREDS.keys():
         chat_session, error = await create_session(cookies)
@@ -120,7 +121,12 @@ async def send_message(userID, message, cookies, style):
                     ws_messages.append(js)
                     break
                 if js['type'] == 7:
+                    if js['allowReconnect'] and retry_on_disconnect:
+                        try_again = True
+                        break
                     raise ChatHubException(bot_strings.CLOSE_MESSAGE_RECEIVED_STRING)
+    if try_again:
+        return await send_message(userID=userID, message=message, cookies=cookies, style=style, retry_on_disconnect=False)
     if ws_messages:
         for responses in ws_messages:
             if js['type'] == 2:
