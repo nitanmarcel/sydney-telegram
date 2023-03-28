@@ -118,3 +118,7 @@ Processing your query...
 NEW_TOPIC_CREATED_STRING = """
 It's always great to start fresh. Ask me anything.
 """
+
+TOPIC_EXPIRES_STRING = """
+Topic has expired, replied message deleted, or you are not the sender of the original message.
+"""

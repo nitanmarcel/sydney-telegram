@@ -262,8 +262,10 @@ async def answer_callback_query(event):
         message = original_message
         if message:
             if bool(message.reply_to_msg_id):
-                message = await message.get_reply_message()
-            if message.sender_id == message.sender_id:
+                reply_message = await message.get_reply_message()
+                if reply_message:
+                    message = reply_message
+            if message.sender_id == event.sender_id:
                 user = await bot_db.get_user(message.sender_id)
                 if not user:
                     user = await bot_db.get_user(chatID=message.chat_id)
@@ -275,7 +277,7 @@ async def answer_callback_query(event):
                     await event.edit(text=original_message.text, file=original_message.file, buttons=buttons)
                     await event.answer(bot_strings.NEW_TOPIC_CREATED_STRING)
                     return
-        await event.answer('Topic has expired, or you are not the sender of the original message.', alert=True)
+        await event.answer(bot_strings.TOPIC_EXPIRES_STRING, alert=True)
         return
     await event.answer()
 
