@@ -2,6 +2,7 @@ import aiohttp
 import bot_config
 import uuid
 
+
 async def get_suggestions(query):
     if not bot_config.SUGGESTIONS_API_KEY:
         return None
@@ -20,6 +21,10 @@ async def get_suggestions(query):
                     if 'ghostText' in searchSuggestion.keys():
                         suggestions.append({'id': str(uuid.uuid4()), 'query': searchSuggestion['ghostText']})
                     else:
-                        suggestion = query + ' ' + searchSuggestion['query'].split(maxsplit=1)[-1]
-                        suggestions.append({'id': str(uuid.uuid4()), 'query': suggestion})
+                        suggestion = searchSuggestion['query']
+                        query_split = query.split()
+                        if suggestion.startswith(query_split[-1]) and len(query_split) > 1:
+                            suggestion = ' '.join(query_split[:-1]) + ' ' + suggestion
+                        else:
+                            suggestions.append({'id': str(uuid.uuid4()), 'query': suggestion})
     return suggestions
