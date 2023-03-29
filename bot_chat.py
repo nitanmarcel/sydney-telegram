@@ -88,6 +88,7 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
         chat_session['isStartOfSession'] = True
         chat_session['semaphore'] = asyncio.Semaphore(1)
         chat_session['style'] = style
+        chat_session['invocationId'] = 0
         MESSAGE_CREDS[userID] = chat_session
     else:
         chat_session = MESSAGE_CREDS[userID]
@@ -95,6 +96,7 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
             del MESSAGE_CREDS[userID]
             return await send_message(userID, message, cookies, style)
         chat_session['isStartOfSession'] = False
+        chat_session['invocationId'] += 1
 
     chat_session['question'] = message
 
@@ -177,7 +179,7 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
     return answer, cards
 
 
-async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, style, **kwargs):
+async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, style, invocationId, **kwargs):
     global MESSAGE_CREDS
     now = datetime.now()
     formatted_date = now.strftime('%Y-%m-%dT%H:%M:%S%z')
@@ -188,21 +190,21 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
         "disable_emoji_spoken_text",
         "responsible_ai_policy_235",
         "enablemm",
-        "deepleofreq",
-        "saharafreq",
-        "forcerep",
+        "telmet",
+        "contentability",
         "cachewriteext",
-        "e2ecachewrite"
+        "e2ecachewrite",
+        "dv3sugg",
     ]
     if style == Style.CREATIVE:
-        optionsSets.extend(['h3imaginative', 'dv3sugg',
+        optionsSets.extend(['h3imaginative',
                            'clgalileo', 'gencontentv3'])
     if style == Style.BALANCED:
         optionsSets.extend(
-            ['galileo', 'glprompt', 'newspoleansgnd', 'dv3sugg'])
+            ['galileo', 'glprompt'])
     if style == Style.PRECISE:
         optionsSets.extend(
-            ['h3precise', 'dv3sugg', 'clgalileo'])
+            ['h3precise', 'clgalileo'])
 
     payload = {
         "arguments": [
@@ -222,19 +224,15 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
                     "SearchQuery"
                 ],
                 "sliceIds": [
-                    "styleord",
-                    "321bic62up",
                     "321bic62",
                     "styleqnatg",
-                    "creatorv2c",
                     "sydpaycontrol",
                     "toneexpcf",
-                    "321toppfp3pp3",
-                    "323frep",
+                    "327telmet",
+                    "325content",
                     "303hubcancls0",
-                    "320newspole",
-                    "321prompt97s0",
-                    "321slocs0",
+                    "326locnwspcs0",
+                    "323glpromptv3",
                     "316e2ecache"
                 ],
                 "verbosity": "verbose",
@@ -260,7 +258,7 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
                 "conversationId": conversationId,
             }
         ],
-        "invocationId": "2",
+        "invocationId": f'{invocationId}',
         "target": "chat",
         "type": 4
     }
