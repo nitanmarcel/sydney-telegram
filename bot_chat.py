@@ -168,44 +168,45 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
             if responses['type'] == 2:
                 cards = []
                 item = responses['item']
-                if 'conversationExpiryTime' in item.keys():
-                    conversationExpiryTime = item['conversationExpiryTime']
-                    conversationExpiryTime = dateparse(conversationExpiryTime)
-                else:
-                    conversationExpiryTime = datetime.now() + timedelta(days=5)
-                    conversationExpiryTime = pytz.utc.localize(
-                        conversationExpiryTime)
-                if 'throttling' in item.keys() and 'messages' in item.keys():
-                    maxNumUserMessagesInConversation = responses['item'][
-                        'throttling']['maxNumUserMessagesInConversation']
-                    numUserMessagesInConversation = responses['item'][
-                        'throttling']['numUserMessagesInConversation']
-                    if pytz.utc.localize(datetime.now()) >= conversationExpiryTime or numUserMessagesInConversation >= maxNumUserMessagesInConversation:
-                        del MESSAGE_CREDS[userID]
-                        return await send_message(userID=userID, message=message, cookies=cookies, style=style)
-                for response in item['messages']:
-                    if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
-                        answer = response['text']
-                        if 'adaptiveCards' in response.keys():
-                            for _card in response['adaptiveCards']:
-                                if _card['type'] == 'AdaptiveCard':
-                                    card = _card['body'][-1]['text']
-                                    markdown_pattern = re.findall(
-                                        r'\[(.*?)\]\((.*?)\)', card)
-                                    cards.extend(
-                                        iter(markdown_pattern))
+                if 'messages' in item.keys():
+                    if 'conversationExpiryTime' in item.keys():
+                        conversationExpiryTime = item['conversationExpiryTime']
+                        conversationExpiryTime = dateparse(conversationExpiryTime)
                     else:
-                        if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
-                            body = response['adaptiveCards'][-1]['body'][0]
-                            if 'text' in body:
-                                answer = response['adaptiveCards'][-1]['body'][0]['text']
-                    if 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
-                        image_query = response['text']
-                    if 'contentOrigin' in response.keys() and response['contentOrigin'] == 'Apology':
-                        answer = response['adaptiveCards'][0]['body'][0]['text']
-                    if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
-                        del MESSAGE_CREDS[userID]
-                break
+                        conversationExpiryTime = datetime.now() + timedelta(days=5)
+                        conversationExpiryTime = pytz.utc.localize(
+                            conversationExpiryTime)
+                    if 'throttling' in item.keys() and 'messages' in item.keys():
+                        maxNumUserMessagesInConversation = responses['item'][
+                            'throttling']['maxNumUserMessagesInConversation']
+                        numUserMessagesInConversation = responses['item'][
+                            'throttling']['numUserMessagesInConversation']
+                        if pytz.utc.localize(datetime.now()) >= conversationExpiryTime or numUserMessagesInConversation >= maxNumUserMessagesInConversation:
+                            del MESSAGE_CREDS[userID]
+                            return await send_message(userID=userID, message=message, cookies=cookies, style=style)
+                    for response in item['messages']:
+                        if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
+                            answer = response['text']
+                            if 'adaptiveCards' in response.keys():
+                                for _card in response['adaptiveCards']:
+                                    if _card['type'] == 'AdaptiveCard':
+                                        card = _card['body'][-1]['text']
+                                        markdown_pattern = re.findall(
+                                            r'\[(.*?)\]\((.*?)\)', card)
+                                        cards.extend(
+                                            iter(markdown_pattern))
+                        else:
+                            if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                                body = response['adaptiveCards'][-1]['body'][0]
+                                if 'text' in body:
+                                    answer = response['adaptiveCards'][-1]['body'][0]['text']
+                        if 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
+                            image_query = response['text']
+                        if 'contentOrigin' in response.keys() and response['contentOrigin'] == 'Apology':
+                            answer = response['adaptiveCards'][0]['body'][0]['text']
+                        if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
+                            del MESSAGE_CREDS[userID]
+                    break
     if image_query:
         answer, error = await bot_img.generate_image(userID, response['text'], cookies)
         if error:
