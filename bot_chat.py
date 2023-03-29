@@ -81,6 +81,7 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
     image_query = None
     try_again = False
     cards = []
+    last_message_type = 0
     if userID not in MESSAGE_CREDS.keys():
         chat_session, error = await create_session(cookies)
         if error:
@@ -127,6 +128,7 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                     raise ChatHubException(bot_strings.RATELIMIT_STRING)
             async for responses in ws:
                 js = json.loads(read_until_separator(responses))
+                last_message_type = js['type']
                 if js['type'] == 6:
                     await ws.send('{"type":6}')
                 elif js['type'] == 1:
@@ -212,7 +214,7 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
         if error:
             raise ChatHubException(error)
     if not answer:
-        raise ChatHubException(bot_strings.PROCESSING_ERROR_STRING)
+        raise ChatHubException(f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
     return answer, cards
 
 
