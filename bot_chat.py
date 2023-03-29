@@ -4,7 +4,7 @@ import json
 import re
 import uuid
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.parser import parse as dateparse
 from enum import Enum
 
@@ -144,8 +144,12 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
         for responses in ws_messages:
             if js['type'] == 2:
                 item = js['item']
-                conversationExpiryTime = item['conversationExpiryTime']
-                conversationExpiryTime = dateparse(conversationExpiryTime)
+                if 'conversationExpiryTime' in item.keys():
+                    conversationExpiryTime = item['conversationExpiryTime']
+                    conversationExpiryTime = dateparse(conversationExpiryTime)
+                else:
+                    conversationExpiryTime = datetime.now() + timedelta(days=5)
+                    conversationExpiryTime = pytz.utc.localize(conversationExpiryTime)
                 if 'throttling' in item.keys() and 'messages' in item.keys():
                     maxNumUserMessagesInConversation = js['item'][
                         'throttling']['maxNumUserMessagesInConversation']
