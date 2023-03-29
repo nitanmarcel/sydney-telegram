@@ -15,6 +15,8 @@ import bot_strings
 
 MESSAGE_CREDS = {}
 
+SEMAPHORE_ITEMS = {}
+
 URL = 'wss://sydney.bing.com/sydney/ChatHub'
 
 
@@ -75,38 +77,38 @@ async def create_session(cookies):
 
 
 async def send_message(userID, message, cookies, style, retry_on_disconnect=True):
-    global MESSAGE_CREDS
-    chat_session = None
-    answer = None
-    image_query = None
-    try_again = False
-    cards = []
-    last_message_type = 0
-    if userID not in MESSAGE_CREDS.keys():
-        chat_session, error = await create_session(cookies)
-        if error:
-            raise ChatHubException(error)
-        chat_session['isStartOfSession'] = True
-        chat_session['semaphore'] = asyncio.Semaphore(1)
-        chat_session['style'] = style
-        chat_session['invocationId'] = 0
-        MESSAGE_CREDS[userID] = chat_session
-    else:
-        chat_session = MESSAGE_CREDS[userID]
-        if chat_session['style'] != style:
-            del MESSAGE_CREDS[userID]
-            return await send_message(userID, message, cookies, style)
-        chat_session['isStartOfSession'] = False
-        if chat_session['invocationId'] >= 8:
+    global MESSAGE_CREDS, SEMAPHORE_ITEMS
+    if userID not in SEMAPHORE_ITEMS.keys():
+        SEMAPHORE_ITEMS[userID] = asyncio.Semaphore(1)
+    async with SEMAPHORE_ITEMS[userID]:
+        chat_session = None
+        answer = None
+        image_query = None
+        try_again = False
+        cards = []
+        last_message_type = 0
+        if userID not in MESSAGE_CREDS.keys():
+            chat_session, error = await create_session(cookies)
+            if error:
+                raise ChatHubException(error)
+            chat_session['isStartOfSession'] = True
+            chat_session['style'] = style
             chat_session['invocationId'] = 0
+            MESSAGE_CREDS[userID] = chat_session
         else:
-            chat_session['invocationId'] += 1
+            chat_session = MESSAGE_CREDS[userID]
+            if chat_session['style'] != style:
+                del MESSAGE_CREDS[userID]
+                return await send_message(userID, message, cookies, style)
+            chat_session['isStartOfSession'] = False
+            if chat_session['invocationId'] >= 8:
+                chat_session['invocationId'] = 0
+            else:
+                chat_session['invocationId'] += 1
 
-    chat_session['question'] = message
+        chat_session['question'] = message
 
-    ws_messages = []
-
-    async with chat_session['semaphore']:
+        ws_messages = []
         message_payload = await build_message(**chat_session)
         async with websockets.connect(URL, ssl=True, ping_timeout=None,
                                       ping_interval=None,
