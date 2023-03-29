@@ -129,31 +129,57 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                 js = json.loads(read_until_separator(responses))
                 if js['type'] == 6:
                     await ws.send('{"type":6}')
-                if js['type'] == 2 or js['type'] == 3:
+                elif js['type'] == 1:
+                    ws_messages.append(js)
+                elif js['type'] == 2 or js['type'] == 3:
                     ws_messages.append(js)
                     break
-                if js['type'] == 7:
+                elif js['type'] == 7:
                     if js['allowReconnect'] and retry_on_disconnect:
                         try_again = True
                         break
                     raise ChatHubException(
                         bot_strings.CLOSE_MESSAGE_RECEIVED_STRING)
+                else:
+                    break
     if try_again:
         return await send_message(userID=userID, message=message, cookies=cookies, style=style, retry_on_disconnect=False)
     if ws_messages:
         for responses in ws_messages:
-            if js['type'] == 2:
-                item = js['item']
+            if responses['type'] == 1 and 'arguments' in responses.keys():
+                messages = responses['arguments'][-1]['messages']
+                for response in messages:
+                    if 'text' in response.keys() and response['author'] == 'bot' and 'messageType' not in response.keys():
+                        answer = response['text']
+                        if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                            _cards = []
+                            for _card in response['adaptiveCards']:
+                                if _card['type'] == 'AdaptiveCard':
+                                    card = _card['body'][-1]['text']
+                                    markdown_pattern = re.findall(
+                                        r'\[(.*?)\]\((.*?)\)', card)
+                                    _cards.extend(
+                                        iter(markdown_pattern))
+                            cards = _cards
+                    elif 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                        body = response['adaptiveCards'][-1]['body'][0]
+                        if 'text' in body.keys():
+                            answer = response['adaptiveCards'][-1]['body'][0]['text']
+            if responses['type'] == 2:
+                cards = []
+                item = responses['item']
                 if 'conversationExpiryTime' in item.keys():
                     conversationExpiryTime = item['conversationExpiryTime']
                     conversationExpiryTime = dateparse(conversationExpiryTime)
                 else:
                     conversationExpiryTime = datetime.now() + timedelta(days=5)
-                    conversationExpiryTime = pytz.utc.localize(conversationExpiryTime)
+                    conversationExpiryTime = pytz.utc.localize(
+                        conversationExpiryTime)
                 if 'throttling' in item.keys() and 'messages' in item.keys():
-                    maxNumUserMessagesInConversation = js['item'][
+                    maxNumUserMessagesInConversation = responses['item'][
                         'throttling']['maxNumUserMessagesInConversation']
-                    numUserMessagesInConversation = js['item']['throttling']['numUserMessagesInConversation']
+                    numUserMessagesInConversation = responses['item'][
+                        'throttling']['numUserMessagesInConversation']
                     if pytz.utc.localize(datetime.now()) >= conversationExpiryTime or numUserMessagesInConversation >= maxNumUserMessagesInConversation:
                         del MESSAGE_CREDS[userID]
                         return await send_message(userID=userID, message=message, cookies=cookies, style=style)
@@ -168,8 +194,10 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                                         r'\[(.*?)\]\((.*?)\)', card)
                                     cards.extend(
                                         iter(markdown_pattern))
-                        else:
-                            if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                    else:
+                        if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                            body = response['adaptiveCards'][-1]['body'][0]
+                            if 'text' in body:
                                 answer = response['adaptiveCards'][-1]['body'][0]['text']
                     if 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
                         image_query = response['text']
@@ -177,6 +205,7 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                         answer = response['adaptiveCards'][0]['body'][0]['text']
                     if 'messageType' in response.keys() and response['messageType'] == 'Disengaged' and userID in MESSAGE_CREDS.keys():
                         del MESSAGE_CREDS[userID]
+                break
     if image_query:
         answer, error = await bot_img.generate_image(userID, response['text'], cookies)
         if error:
@@ -265,7 +294,7 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
                 "conversationId": conversationId,
             }
         ],
-        "invocationId": '2',#f'{invocationId}',
+        "invocationId": '2',  # f'{invocationId}',
         "target": "chat",
         "type": 4
     }

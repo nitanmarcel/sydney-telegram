@@ -92,7 +92,7 @@ Request ended with timeout error. Try again later.
 """
 
 PROCESSING_ERROR_STRING = """
-There was an error processing your response! Try again later.
+Got an unknown response from the server.
 """
 
 CLOSE_MESSAGE_RECEIVED_STRING = """
