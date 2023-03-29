@@ -96,7 +96,10 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
             del MESSAGE_CREDS[userID]
             return await send_message(userID, message, cookies, style)
         chat_session['isStartOfSession'] = False
-        chat_session['invocationId'] += 1
+        if chat_session['invocationId'] >= 8:
+            chat_session['invocationId'] = 0
+        else:
+            chat_session['invocationId'] += 1
 
     chat_session['question'] = message
 
