@@ -346,20 +346,21 @@ async def handle_bot_stopped(event):
 async def message_handler_groups(event):
     if not event.mentioned or not event.text:
         return
-    user = await bot_db.get_user(userID=None, chatID=event.chat_id)
-    if not user:
-        user = await bot_db.get_user(userID=event.sender_id)
-    message = event.text.replace(
-        f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
-    if not user:
-        message, buttons, _ = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None)
-        await event.reply(f'⚠️ {message}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
-        return
-    message, buttons, _ = await answer_builder(userId=user['id'], query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True)
-    if not isinstance(message, list):
-        await event.reply(message, buttons=buttons)
-    else:
-        await event.reply(file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in message], buttons=buttons)
+    async with client.action(event.chat_id, 'typing'):
+        user = await bot_db.get_user(userID=None, chatID=event.chat_id)
+        if not user:
+            user = await bot_db.get_user(userID=event.sender_id)
+        message = event.text.replace(
+            f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
+        if not user:
+            message, buttons, _ = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None)
+            await event.reply(f'⚠️ {message}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
+            return
+        message, buttons, _ = await answer_builder(userId=user['id'], query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True)
+        if not isinstance(message, list):
+            await event.reply(message, buttons=buttons)
+        else:
+            await event.reply(file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in message], buttons=buttons)
 
 
 async def main():
