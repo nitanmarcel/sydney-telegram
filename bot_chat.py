@@ -261,7 +261,7 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
                 "conversationId": conversationId,
             }
         ],
-        "invocationId": f'{invocationId}',
+        "invocationId": '2',#f'{invocationId}',
         "target": "chat",
         "type": 4
     }
