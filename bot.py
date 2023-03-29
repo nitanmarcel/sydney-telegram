@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import re
 import uuid
@@ -117,7 +118,7 @@ async def handle_chat_connect(event):
     await event.edit(bot_strings.CHAT_CONNECT_STRING, buttons=Button.inline('Back', 'back'))
 
 
-async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False):
+async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True):
     try:
         buttons = []
         message, cards = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
@@ -130,11 +131,13 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
         if can_swipe_topics:
             buttons.append([Button.inline(text='New Topic', data='newtopic')])
         return message, buttons, query
-    except (bot_chat.ChatHubException, asyncio.TimeoutError) as exc:
-        if isinstance(exc, bot_chat.ChatHubException):
-            return str(exc), None, query
+    except bot_chat.ChatHubException as exc:
+        return str(exc), None, query
+    except asyncio.TimeoutError as exc:
+        if retry_on_timeout:
+            with contextlib.suppress(asyncio.TimeoutError):
+                return await answer_builder(userId, chatID. style, query, cookies, can_swipe_topics, retry_on_timeout=False)
         return bot_strings.TIMEOUT_ERROR_STRING, None, query
-
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private and not e.via_bot_id))
 async def message_handler_private(event):
