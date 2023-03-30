@@ -65,7 +65,7 @@ async def privacy_handler(event):
             [Button.inline('Collected information', 'privacy_collected')],
             [Button.inline('Why we colect', 'privacy_why')],
             [Button.inline('What we do', 'privacy_whatdo')],
-            [Button.inline('What we not do', 'privacy_whatno')],
+            [Button.inline('What we DO NOT do', 'privacy_whatno')],
             [Button.inline('Rights to process', 'privacy_rights')],
             [Button.inline('Back', 'back')]
         ]

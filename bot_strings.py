@@ -170,9 +170,9 @@ We use your information to provide you with the requested information and to cus
 """
 
 PRIVACY_WHAT_WE_NOT_DO_STRING = """
-What do we NOT do with your information?
+What do we DO NOT do with your information?
 
-We do not share your information with any third parties without your consent with the exception of the provider(s) of the services we are giving you. We do not use your information for any purposes other than those stated above.
+We DO NOT share your information with any third parties without your consent with the exception of the provider(s) of the services we are giving you. We do not use your information for any purposes other than those stated above.
 """
 
 PRIVACY_RIGHT_TO_PROCESS_STRING = """
