@@ -1,6 +1,7 @@
 import gzip
 import pickle
 import re
+import json
 
 import aiohttp
 import cryptography.fernet as fernet
@@ -106,4 +107,15 @@ async def remove_user(userID):
         user = await User.get(userID)
         if user:
             return await User.delete.where(User.id == userID).gino.status()
-    return False
+    return None
+
+async def retrieve_data(userId):
+    if userId in USERS.keys():
+        result = USERS[userId]
+        if result['cookies']:
+            cookies = []
+            for cookie in result['cookies']:
+                cookies.append(str(cookie).split(None, 1)[-1])
+            result['cookies'] = cookies
+        return json.dumps(USERS[userId])
+    return None

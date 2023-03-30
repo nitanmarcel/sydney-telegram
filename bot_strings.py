@@ -36,7 +36,7 @@ Once I receive the URL, I'll use it to complete the OAuth process.
 
 We do not store any of your content or session information with the exception of what is necessary to provide you the service, and only with your consent.
 
-You can always log out by running the /start command and clicking on the Logout button or stopping the bot.
+You can always log out by running the /start command and clicking on the Logout button, from the /start command then privacy policy, or by stopping the bot.
 """
 
 AUTHENTIFICATION_URL_NOT_VALID_STRING = """
@@ -121,4 +121,72 @@ It's always great to start fresh. Ask me anything.
 
 TOPIC_EXPIRES_STRING = """
 Topic has expired, replied message deleted, or you are not the sender of the original message.
+"""
+
+PRIVACY_STRING = """
+This privacy notice outlines the ways in which we collect and process your personal data in compliance with the General Data Protection Regulation (GDPR). We are committed to protecting your privacy and ensuring that your personal data is handled in accordance with the law.
+
+Note that this privacy notice only applies to this bot, and any other third party apis used have their own privacy notice which you can find [here](https://privacy.microsoft.com/en-us/privacystatement) and [here](https://telegram.org/privacy).
+
+If you have any questions or concerns about our privacy practices or this privacy notice, please contact us at {}. We will be happy to address any questions or concerns you may have.
+"""
+
+PRIVACY_RETRIEVE_DATA_STRING = """
+Privacy data report for {} ({}), in JSON format.
+
+Depending on your cookies settings, even if they appear here they might be only temporary stored by the server.
+
+If unsure, you can choose to log out and log in again.
+"""
+
+PRIVACY_DELETE_DATA_STRING = """
+Are you sure you want to delete your data?
+
+This will act the same as the logout button, deleting all your data on the bot server, including user id, cookies, chat id and settings.
+"""
+
+PRIVACY_COLLECTED_INFORMATION_STRING = """
+We collect the following information:
+
+- User ID: This is used to identify the other data in the database.
+- Chat ID: This is used to connect your account to a chat so the members of the specific group can use the services. They are only stored when you connect a chat to the bot.
+- Settings: These are configurations set by the user to change the bot/service response.
+- Cookies: These are used to provide access to the service we use to give you the requested information. They are either stored temporarily or, if you choose, they will be stored in a database.
+"""
+
+PRIVACY_WHY_WE_COLLECT_STRING = """
+We collect this information for the following reasons:
+
+- User ID: This is necessary to identify your data in our database so that we can provide you with the requested information.
+- Chat ID: This is collected to connect your account to a chat so the members of the specific group can use the services. They are only stored when you connect a chat to the bot.
+- Settings: These are collected to customize the bot/service response based on your preferences.
+- Cookies: These are collected to provide you with access to the service we use to give you the requested information.
+"""
+
+PRIVACY_WHAT_WE_DO_STRING = """
+What do we do with your information?
+
+We use your information to provide you with the requested information and to customize the bot/service response based on your preferences. We do not use your information for any other purposes.
+"""
+
+PRIVACY_WHAT_WE_NOT_DO_STRING = """
+What do we NOT do with your information?
+
+We do not share your information with any third parties without your consent with the exception of the provider(s) of the services we are giving you. We do not use your information for any purposes other than those stated above.
+"""
+
+PRIVACY_RIGHT_TO_PROCESS_STRING = """
+Under GDPR, you have the following rights:
+
+- Right to access: You have the right to access your personal data that we hold.
+- Right to rectification: You have the right to have any inaccurate or incomplete personal data corrected.
+- Right to erasure: You have the right to have your personal data erased under certain circumstances.
+- Right to restrict processing: You have the right to restrict the processing of your personal data under certain circumstances.
+- Right to data portability: You have the right to receive a copy of your personal data in a structured, machine-readable format.
+- Right to object: You have the right to object to the processing of your personal data under certain circumstances.
+"""
+
+
+PRIVACY_NO_DATA_STRING = """
+'We don\'t have any of your data in our system.'
 """

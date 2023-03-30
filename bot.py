@@ -5,6 +5,7 @@ import re
 import uuid
 from enum import Enum
 from urllib.parse import parse_qs, urlparse
+from io import BytesIO
 
 from telethon import TelegramClient, events
 from telethon.tl.types import UpdateBotStopped
@@ -29,9 +30,19 @@ class State(Enum):
     SETTINGS = 6
     CONNECT_CHAT = 7
 
+class GdprState(Enum):
+    STATE_PRIVACY_POLICY = 1
+    STATE_RETREIVE_DATA = 2
+    STATE_DELETE_DATA = 3
+    STATE_COLLECTED_INFORMATION = 4
+    STATE_WHY_WE_COLECT = 5
+    STATE_WHAT_WE_DO = 6
+    STATE_WHAT_WE_NOT_DO = 7
+    STATE_RIGHTS_TO_PROCESS = 8
 
 STATES = {}
 
+GDPR_STATES = {}
 
 INLINE_QUERIES_TEXT = {}
 
@@ -46,6 +57,51 @@ def parse_footnotes(text, __pattern=r"\[\^(\d+)\^\]"):
     table = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
     return re.sub(__pattern, lambda match: f" {match.group(1).translate(table)}", text)
 
+async def privacy_handler(event):
+    if GDPR_STATES[event.sender_id] != GdprState.STATE_DELETE_DATA:
+        buttons = [
+            [Button.inline('Retrieve data', 'privacy_retreive')],
+            [Button.inline('Delete data', 'privacy_delete')],
+            [Button.inline('Collected information', 'privacy_collected')],
+            [Button.inline('Why we colect', 'privacy_why')],
+            [Button.inline('What we do', 'privacy_whatdo')],
+            [Button.inline('What we not do', 'privacy_whatno')],
+            [Button.inline('Rights to process', 'privacy_rights')],
+            [Button.inline('Back', 'back')]
+        ]
+        text = None
+        if GDPR_STATES[event.sender_id] == GdprState.STATE_PRIVACY_POLICY:
+            text = bot_strings.PRIVACY_STRING.format(bot_config.BOT_OWNER_USERNAME)
+        elif GDPR_STATES[event.sender_id] == GdprState.STATE_COLLECTED_INFORMATION:
+            text = bot_strings.PRIVACY_COLLECTED_INFORMATION_STRING
+        elif GDPR_STATES[event.sender_id] == GdprState.STATE_WHY_WE_COLECT:
+            text = bot_strings.PRIVACY_WHY_WE_COLLECT_STRING
+        elif GDPR_STATES[event.sender_id] == GdprState.STATE_WHAT_WE_DO:
+            text = bot_strings.PRIVACY_WHAT_WE_DO_STRING
+        elif GDPR_STATES[event.sender_id] == GdprState.STATE_WHAT_WE_NOT_DO:
+            text = bot_strings.PRIVACY_WHAT_WE_NOT_DO_STRING
+        elif GDPR_STATES[event.sender_id] == GdprState.STATE_RIGHTS_TO_PROCESS:
+            text = bot_strings.PRIVACY_RIGHT_TO_PROCESS_STRING
+        if GDPR_STATES[event.sender_id] == GdprState.STATE_RETREIVE_DATA:
+            text = bot_strings.PRIVACY_RETRIEVE_DATA_STRING
+            data = await bot_db.retrieve_data(event.sender_id)
+            if not data:
+                await event.reply(bot_strings.PRIVACY_NO_DATA_STRING)
+            else:
+                sender = await event.get_sender()
+                with BytesIO(str.encode(data)) as privacy_data:
+                    privacy_data.name = f'{event.sender_id}.txt'
+                    await event.reply(
+                        bot_strings.PRIVACY_RETRIEVE_DATA_STRING.format(sender.last_name, event.sender_id),
+                        file=privacy_data
+                    )
+            return
+    else:
+        buttons = [[Button.inline('yes')], [Button.inline('cancel')]]
+        text = bot_strings.PRIVACY_DELETE_DATA_STRING
+    await event.edit(text, buttons=buttons)
+    
+        
 
 async def start_handler(event):
     if STATES[event.sender_id] == State.DONE:
@@ -61,6 +117,7 @@ async def start_handler(event):
              Button.inline(text='Donate', data='donate')],
             [Button.inline(text='Source Code', data='donate')],
         ]
+    buttons.append([Button.inline('Privacy Policy', 'privacy_policy')])
     if not hasattr(event, 'out'):
         await event.edit(bot_strings.FIRST_START_STRING, buttons=buttons)
     elif not event.out:
@@ -138,6 +195,7 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
             with contextlib.suppress(asyncio.TimeoutError):
                 return await answer_builder(userId, chatID. style, query, cookies, can_swipe_topics, retry_on_timeout=False)
         return bot_strings.TIMEOUT_ERROR_STRING, None, query
+
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private and not e.via_bot_id))
 async def message_handler_private(event):
@@ -282,6 +340,41 @@ async def answer_callback_query(event):
                     return
         await event.answer(bot_strings.TOPIC_EXPIRES_STRING, alert=True)
         return
+    if data == 'privacy_policy':
+        GDPR_STATES[event.sender_id] = GdprState.STATE_PRIVACY_POLICY
+        await privacy_handler(event)
+    if data == 'privacy_retreive':
+        GDPR_STATES[event.sender_id] = GdprState.STATE_RETREIVE_DATA
+        await privacy_handler(event)
+    if data == 'privacy_delete':
+        GDPR_STATES[event.sender_id] = GdprState.STATE_DELETE_DATA
+        await privacy_handler(event)
+    if data == 'privacy_collected':
+        GDPR_STATES[event.sender_id] = GdprState.STATE_COLLECTED_INFORMATION
+        await privacy_handler(event)
+    if data == 'privacy_why':
+        GDPR_STATES[event.sender_id] = GdprState.STATE_WHY_WE_COLECT
+        await privacy_handler(event)
+    if data == 'privacy_whatdo':
+        GDPR_STATES[event.sender_id] = GdprState.STATE_WHAT_WE_DO
+        await privacy_handler(event)
+    if data == 'privacy_whatno':
+        GDPR_STATES[event.sender_id] = GdprState.STATE_WHAT_WE_NOT_DO
+        await privacy_handler(event)
+    if data == 'privacy_rights':
+        GDPR_STATES[event.sender_id] = GdprState.STATE_RIGHTS_TO_PROCESS
+        await privacy_handler(event)
+    if data == 'yes':
+        if event.sender_id in GDPR_STATES.keys() and GDPR_STATES[event.sender_id] == GdprState.STATE_DELETE_DATA:
+            result = await bot_db.remove_user(event.sender_id)
+            GDPR_STATES[event.sender_id] = GdprState.STATE_PRIVACY_POLICY
+            await privacy_handler(event)
+            if not result:
+                await event.reply(bot_strings.PRIVACY_NO_DATA_STRING)
+    if data == 'cancel':
+        if event.sender_id in GDPR_STATES.keys() and GDPR_STATES[event.sender_id] == GdprState.STATE_DELETE_DATA:
+            GDPR_STATES[event.sender_id] = GdprState.STATE_PRIVACY_POLICY
+            await privacy_handler(event)
     await event.answer()
 
 

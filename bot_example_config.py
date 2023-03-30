@@ -5,9 +5,11 @@ TELEGRAM_CLIENT_ID = 0
 # Telegram bot token from @BotFather
 TELEGRAM_BOT_TOKEN = ''
 
-
 # The username of the telegram bot.
 TELEGRAM_BOT_USERNAME = ''
+
+# Username handler of the owner of the bot. Used for GDPR
+BOT_OWNER_USERNAME = '@'
 
 # Special client ID to access the sydney chat.
 # It's not shared with the public to prevent abuse. If you got your hands on it, it's your responsability how you use it.
