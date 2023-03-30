@@ -156,9 +156,13 @@ async def settings_hanlder(event):
     if style == bot_chat.Style.PRECISE:
         str_style = 'Precise'
     buttons = [
-        [Button.inline(f'Style: {str_style}', 'style'),
-         Button.inline(f'Connect Chat', 'conchat') if not chat else Button.inline('Remove Chat', 'rmchat')],
-        [Button.inline('Back', 'back')]
+        [
+            Button.inline(f'Style: {str_style}', 'style'),
+            Button.inline('Remove Chat', 'rmchat')
+            if chat
+            else Button.inline('Connect Chat', 'conchat'),
+        ],
+        [Button.inline('Back', 'back')],
     ]
     await event.edit(bot_strings.SETTINGS_STRING, buttons=buttons)
 
@@ -320,8 +324,7 @@ async def answer_callback_query(event):
         await settings_hanlder(event)
     if data == 'newtopic':
         original_message = await event.get_message()
-        message = original_message
-        if message:
+        if message := original_message:
             if bool(message.reply_to_msg_id):
                 reply_message = await message.get_reply_message()
                 if reply_message:
@@ -383,10 +386,9 @@ async def answer_inline_query(event):
     global INLINE_QUERIES_TEXT
     message = event.text
     builder = event.builder
-    if not message and bool((await bot_chat.get_session(event.sender_id))):
-        await event.answer([builder.article('Start new topic', text=bot_strings.NEW_TOPIC_CREATED_STRING, id=f'{uuid.uuid4()}_newtopic')])
-        return
-    elif not message:
+    if not message:
+        if bool(await bot_chat.get_session(event.sender_id)):
+            await event.answer([builder.article('Start new topic', text=bot_strings.NEW_TOPIC_CREATED_STRING, id=f'{uuid.uuid4()}_newtopic')])
         return
     INLINE_QUERIES_TEXT[event.sender_id] = {}
     user = await bot_db.get_user(event.sender_id)
@@ -424,9 +426,11 @@ async def handle_inline_send(event):
     if isinstance(message, list):
         message = '- ' + '\n- '.join([link.split('?')[0] for link in message])
     if buttons:
-        await client.edit_message(event.msg_id, text=f'❓ __{caption}__\n\n' + message, buttons=buttons)
+        await client.edit_message(
+            event.msg_id, text=f'❓ __{caption}__\n\n{message}', buttons=buttons
+        )
     else:
-        await client.edit_message(event.msg_id, text=f'❓ __{caption}__\n\n' + message)
+        await client.edit_message(event.msg_id, text=f'❓ __{caption}__\n\n{message}')
 
 
 @client.on(events.Raw(UpdateBotStopped))

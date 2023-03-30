@@ -58,11 +58,7 @@ USERS = {}
 async def init(dbstring, encryption_key):
     global ENCRYPTION_KEY
     global USERS, ENCRYPTION_KEY
-    if not encryption_key:
-        ENCRYPTION_KEY = _generate_key()
-    else:
-        ENCRYPTION_KEY = encryption_key
-
+    ENCRYPTION_KEY = encryption_key or _generate_key()
     await db.set_bind(dbstring)
     await db.gino.create_all()
 
@@ -113,9 +109,7 @@ async def retrieve_data(userId):
     if userId in USERS.keys():
         result = USERS[userId]
         if result['cookies']:
-            cookies = []
-            for cookie in result['cookies']:
-                cookies.append(str(cookie).split(None, 1)[-1])
+            cookies = [str(cookie).split(None, 1)[-1] for cookie in result['cookies']]
             result['cookies'] = cookies
         return json.dumps(USERS[userId])
     return None

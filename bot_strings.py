@@ -100,7 +100,7 @@ Close message received from server.
 """
 
 POCESSING_ALREADY_STRING = """
-Processing of the last query didn't finished yet.
+Processing of the last query didn't finish yet.
 """
 
 RATELIMIT_STRING = """

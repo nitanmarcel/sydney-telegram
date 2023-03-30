@@ -47,9 +47,7 @@ async def clear_session(userID):
 
 
 async def get_session(userID):
-    if userID in MESSAGE_CREDS.keys():
-        return MESSAGE_CREDS[userID]
-    return None
+    return MESSAGE_CREDS[userID] if userID in MESSAGE_CREDS.keys() else None
 
 
 async def create_session(cookies):
@@ -111,34 +109,36 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
         ws_messages = []
         message_payload = await build_message(**chat_session)
         async with websockets.connect(URL, ssl=True, ping_timeout=None,
-                                      ping_interval=None,
-                                      extensions=[
-                                          websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
-                                              server_max_window_bits=11,
-                                              client_max_window_bits=11,
-                                              compress_settings={
-                                                  'memLevel': 4},
-                                          ), ]) as ws:
+                                              ping_interval=None,
+                                              extensions=[
+                                                  websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
+                                                      server_max_window_bits=11,
+                                                      client_max_window_bits=11,
+                                                      compress_settings={
+                                                          'memLevel': 4},
+                                                  ), ]) as ws:
             await ws.send('{"protocol":"json","version":1}')
             await ws.recv()
             await ws.send('{"type":6}')
             await ws.send(json.dumps(message_payload) + '')
             response = await ws.recv()
             response = json.loads(read_until_separator(response))
-            if response['type'] == 2:
-                if response['item']['result']['value'] == 'Throttled':
-                    raise ChatHubException(bot_strings.RATELIMIT_STRING)
+            if (
+                response['type'] == 2
+                and response['item']['result']['value'] == 'Throttled'
+            ):
+                raise ChatHubException(bot_strings.RATELIMIT_STRING)
             async for responses in ws:
                 js = json.loads(read_until_separator(responses))
                 last_message_type = js['type']
-                if js['type'] == 6:
+                if last_message_type == 6:
                     await ws.send('{"type":6}')
-                elif js['type'] == 1:
+                elif last_message_type == 1:
                     ws_messages.append(js)
-                elif js['type'] == 2 or js['type'] == 3:
+                elif last_message_type in [2, 3]:
                     ws_messages.append(js)
                     break
-                elif js['type'] == 7:
+                elif last_message_type == 7:
                     if js['allowReconnect'] and retry_on_disconnect:
                         try_again = True
                         break
@@ -199,11 +199,10 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                                             r'\[(.*?)\]\((.*?)\)', card)
                                         cards.extend(
                                             iter(markdown_pattern))
-                        else:
-                            if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
-                                body = response['adaptiveCards'][-1]['body'][0]
-                                if 'text' in body:
-                                    answer = response['adaptiveCards'][-1]['body'][0]['text']
+                        elif 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                            body = response['adaptiveCards'][-1]['body'][0]
+                            if 'text' in body:
+                                answer = response['adaptiveCards'][-1]['body'][0]['text']
                         if 'contentType' in response.keys() and response['contentType'] == 'IMAGE':
                             image_query = response['text']
                         if 'contentOrigin' in response.keys() and response['contentOrigin'] == 'Apology':

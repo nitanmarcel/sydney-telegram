@@ -14,8 +14,7 @@ async def get_images(url, aiosession):
     async with aiosession.get(url) as response:
         content = await response.text()
         soup = BeautifulSoup(content, "html.parser")
-        img_tags = soup.find_all("img")
-        if img_tags:
+        if img_tags := soup.find_all("img"):
             images = [img.get('src') for img in img_tags]
     return images
 
