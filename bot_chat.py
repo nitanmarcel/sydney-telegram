@@ -121,15 +121,13 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
             await ws.recv()
             await ws.send('{"type":6}')
             await ws.send(json.dumps(message_payload) + '')
-            response = await ws.recv()
-            response = json.loads(read_until_separator(response))
-            if (
-                response['type'] == 2
-                and response['item']['result']['value'] == 'Throttled'
-            ):
-                raise ChatHubException(bot_strings.RATELIMIT_STRING)
             async for responses in ws:
                 js = json.loads(read_until_separator(responses))
+                if (
+                    js['type'] == 2
+                    and js['item']['result']['value'] == 'Throttled'
+                ):
+                    raise ChatHubException(bot_strings.RATELIMIT_STRING)
                 last_message_type = js['type']
                 if last_message_type == 6:
                     await ws.send('{"type":6}')
@@ -151,25 +149,27 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
     if ws_messages:
         for responses in ws_messages:
             if responses['type'] == 1 and 'arguments' in responses.keys():
-                messages = responses['arguments'][-1]['messages']
-                for response in messages:
-                    if 'text' in response.keys() and response['author'] == 'bot' and 'messageType' not in response.keys():
-                        answer = response['text']
-                        if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
-                            _cards = []
-                            for _card in response['adaptiveCards']:
-                                if _card['type'] == 'AdaptiveCard':
-                                    card = _card['body'][-1]['text']
-                                    markdown_pattern = re.findall(
-                                        r'\[(.*?)\]\((.*?)\)', card)
-                                    _cards.extend(
-                                        iter(markdown_pattern))
-                            cards = _cards
-                    elif 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
-                        body = response['adaptiveCards'][-1]['body'][0]
-                        if 'text' in body.keys():
-                            answer = response['adaptiveCards'][-1]['body'][0]['text']
-            if responses['type'] == 2:
+                argument = responses['arguments'][-1]
+                if messages := argument.get('messages'):
+                    messages = responses['arguments'][-1]['messages']
+                    for response in messages:
+                        if 'text' in response.keys() and response['author'] == 'bot' and 'messageType' not in response.keys():
+                            answer = response['text']
+                            if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                                _cards = []
+                                for _card in response['adaptiveCards']:
+                                    if _card['type'] == 'AdaptiveCard':
+                                        card = _card['body'][-1]['text']
+                                        markdown_pattern = re.findall(
+                                            r'\[(.*?)\]\((.*?)\)', card)
+                                        _cards.extend(
+                                            iter(markdown_pattern))
+                                cards = _cards
+                        elif 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
+                            body = response['adaptiveCards'][-1]['body'][0]
+                            if 'text' in body.keys():
+                                answer = response['adaptiveCards'][-1]['body'][0]['text']
+            if responses['type'] == 2 or responses['type'] == 3:
                 cards = []
                 item = responses['item']
                 if 'messages' in item.keys():

@@ -151,10 +151,13 @@ async def settings_hanlder(event):
     str_style = None
     if style == bot_chat.Style.CREATIVE:
         str_style = 'Creative'
+        await bot_chat.clear_session(event.sender_id)
     if style == bot_chat.Style.BALANCED:
         str_style = 'Balanced'
+        await bot_chat.clear_session(event.sender_id)
     if style == bot_chat.Style.PRECISE:
         str_style = 'Precise'
+        await bot_chat.clear_session(event.sender_id)
     buttons = [
         [
             Button.inline(f'Style: {str_style}', 'style'),
@@ -178,6 +181,8 @@ async def donate_handler(event):
 async def handle_chat_connect(event):
     await event.edit(bot_strings.CHAT_CONNECT_STRING, buttons=Button.inline('Back', 'back'))
 
+async def connect_chat(event):
+    pass
 
 async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True):
     try:
