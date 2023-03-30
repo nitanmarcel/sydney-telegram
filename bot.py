@@ -99,7 +99,7 @@ async def privacy_handler(event):
     else:
         buttons = [[Button.inline('yes')], [Button.inline('cancel')]]
         text = bot_strings.PRIVACY_DELETE_DATA_STRING
-    await event.edit(text, buttons=buttons)
+    await event.edit(text, buttons=buttons, link_preview=False)
     
         
 
