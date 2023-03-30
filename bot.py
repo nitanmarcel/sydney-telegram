@@ -19,7 +19,8 @@ import bot_db
 import bot_oauth
 import bot_strings
 import bot_suggestions
-
+import sys
+import uvloop
 
 class State(Enum):
     FIRST_START = 1
@@ -48,6 +49,7 @@ INLINE_QUERIES_TEXT = {}
 
 logging.basicConfig(level=logging.INFO)
 
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 client = TelegramClient('sydney', bot_config.TELEGRAM_CLIENT_ID,
                         bot_config.TELEGRAM_CLIENT_HASH, catch_up=True)
@@ -477,5 +479,5 @@ if __name__ == '__main__':
     try:
         client.loop.run_until_complete(main())
     finally:
-        if client.is_connected:
+        if client.is_connected():
             client.disconnect()
