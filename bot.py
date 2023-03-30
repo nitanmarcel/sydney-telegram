@@ -193,7 +193,7 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
     except asyncio.TimeoutError as exc:
         if retry_on_timeout:
             with contextlib.suppress(asyncio.TimeoutError):
-                return await answer_builder(userId, chatID. style, query, cookies, can_swipe_topics, retry_on_timeout=False)
+                return await answer_builder(userId, chatID, style, query, cookies, can_swipe_topics, retry_on_timeout=False)
         return bot_strings.TIMEOUT_ERROR_STRING, None, query
 
 
