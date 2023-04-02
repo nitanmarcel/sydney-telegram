@@ -393,15 +393,15 @@ async def answer_inline_query(event):
     global INLINE_QUERIES_TEXT
     message = event.text
     builder = event.builder
+    user = await bot_db.get_user(event.sender_id)
+    if not user:
+        await event.answer(switch_pm=bot_strings.INLINE_NO_COOKIE_STRING, switch_pm_param='start')
+        return
     if not message:
         if bool(await bot_chat.get_session(event.sender_id)):
             await event.answer([builder.article('Start new topic', text=bot_strings.NEW_TOPIC_CREATED_STRING, id=f'{uuid.uuid4()}_newtopic')])
         return
     INLINE_QUERIES_TEXT[event.sender_id] = {}
-    user = await bot_db.get_user(event.sender_id)
-    if not user:
-        await event.answer(switch_pm=bot_strings.INLINE_NO_COOKIE_STRING, switch_pm_param='start')
-        return
 
     suggestions = await bot_suggestions.get_suggestions(message)
     articles = [builder.article(message, text=f'❓ __{message}__', buttons=[
