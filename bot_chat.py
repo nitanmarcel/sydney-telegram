@@ -242,13 +242,13 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
       ]
     if style == Style.CREATIVE:
         optionsSets.extend(['h3imaginative',
-                           'clgalileo', 'dv3sugg', 'gencontentv3', 'gencontentv3', 'clpostgalileo', 'galileoturncl'])
+                           'clgalileo', 'dv3sugg', 'gencontentv3', 'clpostgalileo', 'galileoturncl'])
     if style == Style.BALANCED:
         optionsSets.extend(
-            ['galileo', 'glprompt', 'dlwebtrunc', 'gencontentv3', 'glpromptv02', 'dv3sugg'])
+            ['galileo', 'dlwebtrunc', 'glpromptv02', 'dv3sugg'])
     if style == Style.PRECISE:
         optionsSets.extend(
-            ['h3precise', 'clgalileo', 'dv3sugg', 'clgalileo', 'clpostgalileo', 'galileoturncl'])
+            ['h3precise', 'clgalileo', 'dv3sugg', 'clpostgalileo', 'galileoturncl'])
 
     payload = {
         "arguments": [
