@@ -19,7 +19,7 @@ import bot_db
 import bot_oauth
 import bot_strings
 import bot_suggestions
-import sys
+import bot_markdown
 import uvloop
 
 class State(Enum):
@@ -54,10 +54,7 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 client = TelegramClient('sydney', bot_config.TELEGRAM_CLIENT_ID,
                         bot_config.TELEGRAM_CLIENT_HASH, catch_up=True)
 
-
-def parse_footnotes(text, __pattern=r"\[\^(\d+)\^\]"):
-    table = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
-    return re.sub(__pattern, lambda match: f" {match.group(1).translate(table)}", text)
+client.parse_mode = bot_markdown.SydMarkdown()
 
 async def privacy_handler(event):
     if GDPR_STATES[event.sender_id] != GdprState.STATE_DELETE_DATA:
@@ -190,8 +187,6 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
     try:
         buttons = []
         message, cards = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
-        if not isinstance(message, list):
-            message = parse_footnotes(message)
         if cards:
             buttons = [Button.url(card[0], card[1]) for card in cards]
             buttons = [[buttons[i], buttons[i+1]] if i+1 <
