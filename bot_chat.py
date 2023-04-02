@@ -12,6 +12,7 @@ import aiohttp
 import websockets
 import bot_img
 import bot_strings
+import bot_utils
 
 MESSAGE_CREDS = {}
 
@@ -73,7 +74,7 @@ async def create_session(cookies):
                         chat_session['conversationSignature'] = js['conversationSignature']
     return chat_session, error
 
-
+@bot_utils.timeout(66)
 async def send_message(userID, message, cookies, style, retry_on_disconnect=True):
     global MESSAGE_CREDS, SEMAPHORE_ITEMS
     if userID not in SEMAPHORE_ITEMS.keys():
