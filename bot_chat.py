@@ -156,6 +156,8 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                     for response in messages:
                         if 'text' in response.keys() and response['author'] == 'bot' and 'messageType' not in response.keys():
                             answer = response['text']
+                            if not answer:
+                                continue
                             if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                                 _cards = []
                                 for _card in response['adaptiveCards']:
@@ -192,6 +194,8 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                     for response in item['messages']:
                         if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
                             answer = response['text']
+                            if not answer:
+                                continue
                             if 'adaptiveCards' in response.keys():
                                 for _card in response['adaptiveCards']:
                                     if _card['type'] == 'AdaptiveCard':
