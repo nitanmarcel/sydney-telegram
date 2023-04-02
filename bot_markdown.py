@@ -3,16 +3,16 @@ from telethon import types
 import re
 
 def extract_code(text):
-    md_languages = ['actionscript3', 'apache', 'applescript', 'asp', 'brainfuck', 'c', 'cfm', 'clojure', 'cmake', 'coffee-script', 'coffeescript', 'coffee', 'cpp', 'C++', 'cs', 'csharp', 'css', 'csv', 'bash', 'diff', 'elixir', 'erb', 'HTML', 'Embedded', 'Ruby', 'go', 'haml', 'http', 'java', 'javascript', 'json', 'jsx', 'less', 'lolcode', 'make', 'Makefile', 'markdown', 'matlab', 'nginx', 'objectivec', 'pascal', 'PHP', 'Perl', 'python', 'profile', 'python', 'profiler', 'output', 'rust', 'salt', 'saltstate', 'Salt', 'shell', 'sh', 'zsh', 'bash', 'Shell', 'scripting', 'scss', 'sql', 'svg', 'swift', 'rb', 'jruby', 'ruby', 'Ruby', 'smalltalk', 'vim', 'viml', 'Vim', 'Script', 'volt', 'vhdl', 'vue', 'xml', 'XML', 'and', 'also', 'used', 'for', 'HTML', 'with', 'inline', 'CSS', 'and', 'Javascript', 'yaml']
+    md_languages = ['actionscript3', 'apache', 'applescript', 'asp', 'brainfuck', 'c', 'cfm', 'clojure', 'cmake', 'coffee-script', 'coffeescript', 'coffee', 'cpp', 'c++', 'cs', 'csharp', 'css', 'csv', 'bash', 'diff', 'elixir', 'erb', 'html', 'embedded', 'ruby', 'go', 'haml', 'http', 'java', 'javascript', 'json', 'jsx', 'less', 'lolcode', 'make', 'makefile', 'markdown', 'matlab', 'nginx', 'objectivec', 'pascal', 'php', 'perl', 'python', 'profile', 'python', 'profiler', 'output', 'rust', 'salt', 'saltstate', 'salt', 'shell', 'sh', 'zsh', 'bash', 'shell', 'scripting', 'scss', 'sql', 'svg', 'swift', 'rb', 'jruby', 'ruby', 'ruby', 'smalltalk', 'vim', 'viml', 'vim', 'script', 'volt', 'vhdl', 'vue', 'xml', 'xml', 'and', 'also', 'used', 'for', 'html', 'with', 'inline', 'css', 'and', 'javascript', 'yaml']
     pattern = r'```([\w+#]*)\n(.+?)```'
     matches = re.findall(pattern, text, flags=re.DOTALL)
     languages = []
     for match in matches:
         language = match[0]
         code = match[1]
-        if language in md_languages:
+        if language.lower() in md_languages:
             code = code.replace(language, '', 1).lstrip()
-            languages.append(language)
+            languages.append(language.lower())
             text = text.replace(f'```{language}\n{code}```', f'```{code}```')
         else:
             languages.append('')
