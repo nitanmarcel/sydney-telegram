@@ -230,8 +230,8 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                                             r'\[(.*?)\]\((.*?)\)', card)
                                         cards.extend(
                                             iter(markdown_pattern))
-                        elif response['author'] == 'bot' and 'messageType' in response.keys() and response['messageType'] == 'RenderCardRequest':
-                            answer = 'https://www.bing.com/images/search?q=' + urllib.parse.quote(response['text'])
+                        elif response['author'] == 'bot' and 'messageType' in response.keys() and response['messageType'] == 'RenderCardRequest' and not answer:
+                            answer = 'https://www.bing.com/search?q=' + urllib.parse.quote(response['text'])
                         elif 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                             body = response['adaptiveCards'][-1]['body'][0]
                             if 'text' in body:
