@@ -74,6 +74,7 @@ async def create_session(cookies):
                         chat_session['conversationSignature'] = js['conversationSignature']
     return chat_session, error
 
+
 @bot_utils.timeout(66)
 async def send_message(userID, message, cookies, style, retry_on_disconnect=True):
     global MESSAGE_CREDS, SEMAPHORE_ITEMS
@@ -110,14 +111,14 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
         ws_messages = []
         message_payload = await build_message(**chat_session)
         async with websockets.connect(URL, ssl=True, ping_timeout=None,
-                                              ping_interval=None,
-                                              extensions=[
-                                                  websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
-                                                      server_max_window_bits=11,
-                                                      client_max_window_bits=11,
-                                                      compress_settings={
-                                                          'memLevel': 4},
-                                                  ), ]) as ws:
+                                      ping_interval=None,
+                                      extensions=[
+                                          websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
+                                              server_max_window_bits=11,
+                                              client_max_window_bits=11,
+                                              compress_settings={
+                                                  'memLevel': 4},
+                                          ), ]) as ws:
             await ws.send('{"protocol":"json","version":1}')
             await ws.recv()
             await ws.send('{"type":6}')
@@ -178,7 +179,8 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                 if 'messages' in item.keys():
                     if 'conversationExpiryTime' in item.keys():
                         conversationExpiryTime = item['conversationExpiryTime']
-                        conversationExpiryTime = dateparse(conversationExpiryTime)
+                        conversationExpiryTime = dateparse(
+                            conversationExpiryTime)
                     else:
                         conversationExpiryTime = datetime.now() + timedelta(days=5)
                         conversationExpiryTime = pytz.utc.localize(
@@ -220,7 +222,8 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
         if error:
             raise ChatHubException(error)
     if not answer:
-        raise ChatHubException(f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
+        raise ChatHubException(
+            f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
     return answer, cards
 
 
@@ -229,26 +232,14 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
     now = datetime.now()
     formatted_date = now.strftime('%Y-%m-%dT%H:%M:%S%z')
 
-    optionsSets = [
-        "nlu_direct_response_filter",
-        "deepleo",
-        "disable_emoji_spoken_text",
-        "responsible_ai_policy_235",
-        "enablemm",
-        "serploc",
-        "contentability",
-        "cachewriteext",
-        "e2ecachewrite",
-      ]
+    optionsSets = ['nlu_direct_response_filter', 'deepleo', 'disable_emoji_spoken_text', 'responsible_ai_policy_235',
+                   'enablemm', 'galileo', 'serploc', 'contentability', 'dv3sugg', 'dlwebtrunc', 'glpromptv3plus']
     if style == Style.CREATIVE:
-        optionsSets.extend(['h3imaginative',
-                           'clgalileo', 'dv3sugg', 'gencontentv3', 'clpostgalileo', 'galileoturncl'])
-    if style == Style.BALANCED:
-        optionsSets.extend(
-            ['galileo', 'dlwebtrunc', 'glpromptv02', 'dv3sugg'])
+        optionsSets = ['nlu_direct_response_filter', 'deepleo', 'disable_emoji_spoken_text', 'responsible_ai_policy_235', 'enablemm',
+                       'h3imaginative', 'serploc', 'contentability', 'dv3sugg', 'clgalileo', 'gencontentv3', 'gencontentv3', 'clpostgalileo', 'galileoturncl']
     if style == Style.PRECISE:
         optionsSets.extend(
-            ['h3precise', 'clgalileo', 'dv3sugg', 'clpostgalileo', 'galileoturncl'])
+            ['nlu_direct_response_filter', 'deepleo', 'disable_emoji_spoken_text', 'responsible_ai_policy_235', 'enablemm', 'h3precise', 'serploc', 'contentability', 'dv3sugg', 'clgalileo', 'clpostgalileo', 'galileoturncl'])
 
     payload = {
         "arguments": [
