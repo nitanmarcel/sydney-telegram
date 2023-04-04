@@ -173,9 +173,12 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                             body = response['adaptiveCards'][-1]['body'][0]
                             if 'text' in body.keys():
                                 answer = response['adaptiveCards'][-1]['body'][0]['text']
-            if responses['type'] == 2 or responses['type'] == 3:
+            if responses['type'] == 2:
                 cards = []
                 item = responses['item']
+                if 'result' in item.keys():
+                    if 'error' in item['result']:
+                        raise ChatHubException(item['result']['error']['message'])
                 if 'messages' in item.keys():
                     if 'conversationExpiryTime' in item.keys():
                         conversationExpiryTime = item['conversationExpiryTime']
