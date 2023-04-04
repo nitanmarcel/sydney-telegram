@@ -185,16 +185,18 @@ async def connect_chat(event):
 
 async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True):
     try:
-        buttons = None
+        buttons = []
         answer = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
         if isinstance(answer, bot_chat.ResponseTypeText):
             if answer.cards:
                 buttons = [Button.url(card[0], card[1]) for card in answer.cards]
                 buttons = [[buttons[i], buttons[i+1]] if i+1 <
                         len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
+                if answer.render_card:
+                    buttons.append([Button.url(answer.render_card.text, answer.render_card.url)])
                 if can_swipe_topics:
                     buttons.append([Button.inline(text='New Topic', data='newtopic')])
-            return answer.answer, buttons, query, False
+            return answer.answer, buttons or None, query, False
         if isinstance(answer, bot_chat.ResponseTypeImage):
             return answer.images, None, answer.caption, True
     except bot_chat.ChatHubException as exc:
