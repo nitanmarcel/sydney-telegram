@@ -198,7 +198,7 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
         if isinstance(answer, bot_chat.ResponseTypeImage):
             return answer.images, None, answer.caption, True
     except bot_chat.ChatHubException as exc:
-        return str(exc), None, query
+        return str(exc), None, query, False
     except asyncio.TimeoutError as exc:
         if retry_on_timeout:
             with contextlib.suppress(asyncio.TimeoutError):
