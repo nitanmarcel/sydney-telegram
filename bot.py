@@ -11,20 +11,7 @@ from telethon import TelegramClient, events
 from telethon.tl.types import UpdateBotStopped
 from telethon.tl.types import UpdateBotInlineSend
 from telethon.tl.types import InputMediaPhotoExternal
-from telethon.tl.types import KeyboardButtonBuy
-from telethon.tl.types import KeyboardButtonCallback
-from telethon.tl.types import KeyboardButtonGame
-from telethon.tl.types import KeyboardButtonSwitchInline
-from telethon.tl.types import KeyboardButtonUrl
-from telethon.tl.types import InputKeyboardButtonUrlAuth
-from telethon.tl.types import KeyboardButtonWebView
-from telethon.tl.types import KeyboardButtonRow
-from telethon.tl.types import ReplyInlineMarkup
-from telethon.tl.types import ReplyKeyboardMarkup
 from telethon.tl.custom import Button
-from telethon.tl.custom import MessageButton
-from telethon.client.buttons import ButtonMethods
-from telethon import utils
 
 import bot_chat
 import bot_config
@@ -35,7 +22,6 @@ import bot_suggestions
 import bot_markdown
 import uvloop
 
-
 class State(Enum):
     FIRST_START = 1
     AGREEMENT = 2
@@ -44,7 +30,6 @@ class State(Enum):
     UNKNOWN = 5
     SETTINGS = 6
     CONNECT_CHAT = 7
-
 
 class GdprState(Enum):
     STATE_PRIVACY_POLICY = 1
@@ -55,91 +40,6 @@ class GdprState(Enum):
     STATE_WHAT_WE_DO = 6
     STATE_WHAT_WE_NOT_DO = 7
     STATE_RIGHTS_TO_PROCESS = 8
-
-
-class SydButton(Button):
-    def init(self, button, *, resize, single_use, selective):
-        super().init(button, resize=resize, single_use=single_use, selective=selective)
-
-    @staticmethod
-    def _is_inline(button):
-        return isinstance(button, (
-            KeyboardButtonBuy,
-            KeyboardButtonCallback,
-            KeyboardButtonGame,
-            KeyboardButtonSwitchInline,
-            KeyboardButtonUrl,
-            InputKeyboardButtonUrlAuth,
-            KeyboardButtonWebView
-        ))
-
-    @staticmethod
-    def simple_web_app(text, url):
-        return KeyboardButtonWebView(text, url)
-
-
-class SydButtonMethods(ButtonMethods):
-    # https://github.com/LonamiWebs/Telethon/blob/v1/telethon/client/buttons.py
-    # Copyright (c) 2016-Present LonamiWebs - MIT License
-    @staticmethod
-    def build_reply_markup(buttons, inline_only=False):
-        if buttons is None:
-            return None
-
-        try:
-            if buttons.SUBCLASS_OF_ID == 0xe2e10ef2:
-                return buttons  # crc32(b'ReplyMarkup'):
-        except AttributeError:
-            pass
-
-        if not utils.is_list_like(buttons):
-            buttons = [[buttons]]
-        elif not buttons or not utils.is_list_like(buttons[0]):
-            buttons = [buttons]
-
-        is_inline = False
-        is_normal = False
-        resize = None
-        single_use = None
-        selective = None
-
-        rows = []
-        for row in buttons:
-            current = []
-            for button in row:
-                if isinstance(button, Button):
-                    if button.resize is not None:
-                        resize = button.resize
-                    if button.single_use is not None:
-                        single_use = button.single_use
-                    if button.selective is not None:
-                        selective = button.selective
-
-                    button = button.button
-                elif isinstance(button, MessageButton):
-                    button = button.button
-
-                inline = SydButton._is_inline(button)
-                is_inline |= inline
-                is_normal |= not inline
-
-                if button.SUBCLASS_OF_ID == 0xbad74a3:
-                    # 0xbad74a3 == crc32(b'KeyboardButton')
-                    current.append(button)
-
-            if current:
-                rows.append(KeyboardButtonRow(current))
-
-        if inline_only and is_normal:
-            raise ValueError('You cannot use non-inline buttons here')
-        elif is_inline == is_normal and is_normal:
-            raise ValueError('You cannot mix inline with normal buttons')
-        elif is_inline:
-            return ReplyInlineMarkup(rows)
-        # elif is_normal:
-        return ReplyKeyboardMarkup(
-            rows, resize=resize, single_use=single_use, selective=selective)
-
 
 STATES = {}
 
@@ -156,23 +56,21 @@ client = TelegramClient('sydney', bot_config.TELEGRAM_CLIENT_ID,
 
 client.parse_mode = bot_markdown.SydMarkdown()
 
-
 async def privacy_handler(event):
     if GDPR_STATES[event.sender_id] != GdprState.STATE_DELETE_DATA:
         buttons = [
-            [SydButton.inline('Retrieve data', 'privacy_retreive')],
-            [SydButton.inline('Delete data', 'privacy_delete')],
-            [SydButton.inline('Collected information', 'privacy_collected')],
-            [SydButton.inline('Why we colect', 'privacy_why')],
-            [SydButton.inline('What we do', 'privacy_whatdo')],
-            [SydButton.inline('What we DO NOT do', 'privacy_whatno')],
-            [SydButton.inline('Rights to process', 'privacy_rights')],
-            [SydButton.inline('Back', 'back')]
+            [Button.inline('Retrieve data', 'privacy_retreive')],
+            [Button.inline('Delete data', 'privacy_delete')],
+            [Button.inline('Collected information', 'privacy_collected')],
+            [Button.inline('Why we colect', 'privacy_why')],
+            [Button.inline('What we do', 'privacy_whatdo')],
+            [Button.inline('What we DO NOT do', 'privacy_whatno')],
+            [Button.inline('Rights to process', 'privacy_rights')],
+            [Button.inline('Back', 'back')]
         ]
         text = None
         if GDPR_STATES[event.sender_id] == GdprState.STATE_PRIVACY_POLICY:
-            text = bot_strings.PRIVACY_STRING.format(
-                bot_config.BOT_OWNER_USERNAME)
+            text = bot_strings.PRIVACY_STRING.format(bot_config.BOT_OWNER_USERNAME)
         elif GDPR_STATES[event.sender_id] == GdprState.STATE_COLLECTED_INFORMATION:
             text = bot_strings.PRIVACY_COLLECTED_INFORMATION_STRING
         elif GDPR_STATES[event.sender_id] == GdprState.STATE_WHY_WE_COLECT:
@@ -193,32 +91,32 @@ async def privacy_handler(event):
                 with BytesIO(str.encode(data)) as privacy_data:
                     privacy_data.name = f'{event.sender_id}.txt'
                     await event.reply(
-                        bot_strings.PRIVACY_RETRIEVE_DATA_STRING.format(
-                            sender.last_name, event.sender_id),
+                        bot_strings.PRIVACY_RETRIEVE_DATA_STRING.format(sender.last_name, event.sender_id),
                         file=privacy_data
                     )
             return
     else:
-        buttons = [[SydButton.inline('yes')], [SydButton.inline('cancel')]]
+        buttons = [[Button.inline('yes')], [Button.inline('cancel')]]
         text = bot_strings.PRIVACY_DELETE_DATA_STRING
     await event.edit(text, buttons=buttons, link_preview=False)
-
+    
+        
 
 async def start_handler(event):
     if STATES[event.sender_id] == State.DONE:
         buttons = [
-            [SydButton.inline(text='Donate', data='donate'),
-             SydButton.inline(text='Logout', data='logout')],
-            [SydButton.inline(text='Source Code', data='donate'),
-             SydButton.inline(text='Settings', data='settings')],
+            [Button.inline(text='Donate', data='donate'),
+             Button.inline(text='Logout', data='logout')],
+            [Button.inline(text='Source Code', data='donate'),
+             Button.inline(text='Settings', data='settings')],
         ]
     else:
         buttons = [
-            [SydButton.inline(text='Continue', data='continue'),
-             SydButton.inline(text='Donate', data='donate')],
-            [SydButton.inline(text='Source Code', data='donate')],
+            [Button.inline(text='Continue', data='continue'),
+             Button.inline(text='Donate', data='donate')],
+            [Button.inline(text='Source Code', data='donate')],
         ]
-    buttons.append([SydButton.inline('Privacy Policy', 'privacy_policy')])
+    buttons.append([Button.inline('Privacy Policy', 'privacy_policy')])
     if not hasattr(event, 'out'):
         await event.edit(bot_strings.FIRST_START_STRING, buttons=buttons)
     elif not event.out:
@@ -226,15 +124,15 @@ async def start_handler(event):
 
 
 async def agreement_handler(event):
-    back_button = SydButton.inline(text='Back', data='back')
-    accept_button = SydButton.inline(text='Agree', data='agree')
+    back_button = Button.inline(text='Back', data='back')
+    accept_button = Button.inline(text='Agree', data='agree')
     await event.edit(bot_strings.AGREEMENT_STRING,
                      buttons=[[back_button, accept_button]])
 
 
 async def oauth_handler(event):
     oauth_url = await bot_oauth.get_auth_url(bot_config.SYDNEY_CLIENT_ID)
-    oauth_button = SydButton.url("Log in", url=oauth_url)
+    oauth_button = Button.url("Log in", url=oauth_url)
     await event.edit(bot_strings.OAUTH_STRING, buttons=[[oauth_button]])
 
 
@@ -261,31 +159,29 @@ async def settings_hanlder(event):
         await bot_chat.clear_session(event.sender_id)
     buttons = [
         [
-            SydButton.inline(f'Style: {str_style}', 'style'),
-            SydButton.inline('Remove Chat', 'rmchat')
+            Button.inline(f'Style: {str_style}', 'style'),
+            Button.inline('Remove Chat', 'rmchat')
             if chat
-            else SydButton.inline('Connect Chat', 'conchat'),
+            else Button.inline('Connect Chat', 'conchat'),
         ],
-        [SydButton.inline('Back', 'back')],
+        [Button.inline('Back', 'back')],
     ]
     await event.edit(bot_strings.SETTINGS_STRING, buttons=buttons)
 
 
 async def donate_handler(event):
-    back_button = SydButton.inline(text='Back', data='back')
-    source_button = SydButton.url(
+    back_button = Button.inline(text='Back', data='back')
+    source_button = Button.url(
         text='Source Code', url='https://github.com/nitanmarcel/sydney-telegram')
     await event.edit(bot_strings.DONATION_STRING,
                      buttons=[[back_button, source_button]], link_preview=False)
 
 
 async def handle_chat_connect(event):
-    await event.edit(bot_strings.CHAT_CONNECT_STRING, buttons=SydButton.inline('Back', 'back'))
-
+    await event.edit(bot_strings.CHAT_CONNECT_STRING, buttons=Button.inline('Back', 'back'))
 
 async def connect_chat(event):
     pass
-
 
 async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True):
     try:
@@ -293,18 +189,11 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
         answer = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
         if isinstance(answer, bot_chat.ResponseTypeText):
             if answer.cards:
-                buttons = [SydButton.url(card[0], card[1])
-                           for card in answer.cards]
+                buttons = [Button.url(card[0], card[1]) for card in answer.cards]
                 buttons = [[buttons[i], buttons[i+1]] if i+1 <
-                           len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
-            if answer.render_card:
-                buttons.append([SydButton.simple_web_app(
-                    answer.render_card.text, answer.render_card.url)])
-            if can_swipe_topics:
-                buttons.append(
-                    [SydButton.inline(text='New Topic', data='newtopic')])
-            if buttons:
-                buttons = SydButtonMethods.build_reply_markup(buttons, True)
+                        len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
+                if can_swipe_topics:
+                    buttons.append([Button.inline(text='New Topic', data='newtopic')])
             return answer.answer, buttons, query, False
         if isinstance(answer, bot_chat.ResponseTypeImage):
             return answer.images, None, answer.caption, True
@@ -349,7 +238,7 @@ async def message_handler_private(event):
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
             answer, buttons, caption, is_image = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
-                                                                      cookies=user['cookies'], can_swipe_topics=True)
+                                                       cookies=user['cookies'], can_swipe_topics=True)
             if is_image:
                 await event.reply(caption, file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in answer], buttons=buttons)
             else:
@@ -369,7 +258,7 @@ async def message_handler_private(event):
         auth_code = parse_qs(parsed_auth_url.query)['code'][0]
         cookies, has_sydney = await bot_oauth.auth(auth_code, bot_config.SYDNEY_CLIENT_ID)
         if not has_sydney:
-            await event.reply(bot_strings.NOT_IN_WHITELST_STRING, buttons=[SydButton.url('Join', 'https://www.bing.com/new')])
+            await event.reply(bot_strings.NOT_IN_WHITELST_STRING, buttons=[Button.url('Join', 'https://www.bing.com/new')])
             STATES[event.sender_id] = State.FIRST_START
             return
         if not cookies:
@@ -377,7 +266,7 @@ async def message_handler_private(event):
             STATES[event.sender_id] = State.FIRST_START
             return
         await event.reply(bot_strings.AUTHENTIFICATION_DONE_STRING.format(bot_config.TELEGRAM_BOT_USERNAME),
-                          buttons=[SydButton.inline('Stay logged in', 'keepcookies')])
+                          buttons=[Button.inline('Stay logged in', 'keepcookies')])
         STATES[event.sender_id] = State.DONE
         await bot_db.insert_user(event.sender_id, cookies, style=bot_chat.Style.BALANCED.value, chat=None, keep_cookies=False)
         await start_handler(event)
@@ -514,7 +403,7 @@ async def answer_inline_query(event):
 
     suggestions = await bot_suggestions.get_suggestions(message)
     articles = [builder.article(message, text=f'❓ __{message}__', buttons=[
-                                SydButton.inline('Please wait...')])]
+                                Button.inline('Please wait...')])]
 
     if suggestions:
         for suggestion in suggestions:
@@ -523,7 +412,7 @@ async def answer_inline_query(event):
                 INLINE_QUERIES_TEXT[event.sender_id].update(
                     {suggestion['id']: message})
                 articles.append(builder.article(message, text=f'❓ __{message}__', buttons=[
-                                SydButton.inline('Please wait...')], id=suggestion['id']))
+                                Button.inline('Please wait...')], id=suggestion['id']))
 
     await event.answer(articles)
 
@@ -540,8 +429,7 @@ async def handle_inline_send(event):
         query = suggestions[event.id]
     answer, buttons, caption, is_image = await answer_builder(userId=event.user_id, query=query, style=user['style'], cookies=user['cookies'])
     if is_image:
-        images_list = '- ' + \
-            '\n- '.join([link.split('?')[0] for link in answer])
+        images_list = '- ' + '\n- '.join([link.split('?')[0] for link in answer])
         await client.edit_message(event.msg_id, text=f'{caption}\n\n{images_list}')
     else:
         if buttons:
@@ -573,7 +461,7 @@ async def message_handler_groups(event):
             f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
         if not user:
             answer, buttons, caption, is_image = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None)
-            await event.reply(f'⚠️ {answer}', buttons=[SydButton.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
+            await event.reply(f'⚠️ {answer}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
             return
         answer, buttons, caption, is_image = await answer_builder(userId=user['id'], query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True)
         if is_image:

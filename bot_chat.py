@@ -9,7 +9,8 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse as dateparse
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
+from typing import List, Union
+from telethon.custom import Button
 
 import aiohttp
 import websockets
@@ -26,25 +27,15 @@ URL = 'wss://sydney.bing.com/sydney/ChatHub'
 class ChatHubException(Exception):
     pass
 
-
-@dataclass
-class SydRenderCard:
-    text: Optional[str]
-    url: str
-
-
 @dataclass
 class ResponseTypeText:
     answer: str
     cards: List[str]
-    render_card: Optional[SydRenderCard]
-
 
 @dataclass
 class ResponseTypeImage:
     images: List[str]
     caption: str
-
 
 class Style(Enum):
     CREATIVE = 1
@@ -106,8 +97,7 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
             result = await asyncio.wait_for(_send_message(userID, message, cookies, style, retry_on_disconnect=retry_on_disconnect), timeout=seconds)
             return result
         except asyncio.TimeoutError:
-            raise asyncio.TimeoutError(
-                f"Function {_send_message.__name__} timed out after {seconds} seconds")
+            raise asyncio.TimeoutError(f"Function {_send_message.__name__} timed out after {seconds} seconds")
 
 
 async def _send_message(userID, message, cookies, style, retry_on_disconnect=True):
@@ -117,7 +107,6 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
     image_query = None
     try_again = False
     cards = []
-    render_card = None
     last_message_type = 0
     if userID not in MESSAGE_CREDS.keys():
         chat_session, error = await create_session(cookies)
@@ -143,14 +132,14 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
     ws_messages = []
     message_payload = await build_message(**chat_session)
     async with websockets.connect(URL, ssl=True, ping_timeout=None,
-                                  ping_interval=None,
-                                  extensions=[
-                                      websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
-                                          server_max_window_bits=11,
-                                          client_max_window_bits=11,
-                                          compress_settings={
-                                              'memLevel': 4},
-                                      ), ]) as ws:
+                                    ping_interval=None,
+                                    extensions=[
+                                        websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
+                                            server_max_window_bits=11,
+                                            client_max_window_bits=11,
+                                            compress_settings={
+                                                'memLevel': 4},
+                                        ), ]) as ws:
         await ws.send('{"protocol":"json","version":1}')
         await ws.recv()
         await ws.send('{"type":6}')
@@ -210,8 +199,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                 item = responses['item']
                 if 'result' in item.keys():
                     if 'error' in item['result']:
-                        raise ChatHubException(
-                            item['result']['error']['message'])
+                        raise ChatHubException(item['result']['error']['message'])
                 if 'messages' in item.keys():
                     if 'conversationExpiryTime' in item.keys():
                         conversationExpiryTime = item['conversationExpiryTime']
@@ -242,12 +230,8 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                                             r'\[(.*?)\]\((.*?)\)', card)
                                         cards.extend(
                                             iter(markdown_pattern))
-                        elif response['author'] == 'bot' and 'messageType' in response.keys() and response['messageType'] == 'RenderCardRequest':
-                            uri = 'https://www.bing.com/search?q='
-                            if not answer:
-                                answer = f'[{response["text"]}]({uri}{urllib.parse.quote(response["text"])})'
-                            render_card = SydRenderCard(
-                                'Read More', f'{uri}{urllib.parse.quote(response["text"])}')
+                        elif response['author'] == 'bot' and 'messageType' in response.keys() and response['messageType'] == 'RenderCardRequest' and not answer:
+                            answer = 'https://www.bing.com/search?q=' + urllib.parse.quote(response['text'])
                         elif 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                             body = response['adaptiveCards'][-1]['body'][0]
                             if 'text' in body:
@@ -268,7 +252,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
     if not answer:
         raise ChatHubException(
             f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
-    return ResponseTypeText(answer, cards, render_card)
+    return ResponseTypeText(answer, cards)
 
 
 async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, style, invocationId, **kwargs):
