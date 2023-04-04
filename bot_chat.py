@@ -15,7 +15,6 @@ import aiohttp
 import websockets
 import bot_img
 import bot_strings
-import bot_utils
 
 MESSAGE_CREDS = {}
 
@@ -87,77 +86,86 @@ async def create_session(cookies):
     return chat_session, error
 
 
-@bot_utils.timeout(66)
 async def send_message(userID, message, cookies, style, retry_on_disconnect=True):
-    global MESSAGE_CREDS, SEMAPHORE_ITEMS
+    global SEMAPHORE_ITEMS
     if userID not in SEMAPHORE_ITEMS.keys():
         SEMAPHORE_ITEMS[userID] = asyncio.Semaphore(1)
+    seconds = 66
     async with SEMAPHORE_ITEMS[userID]:
-        chat_session = None
-        answer = None
-        image_query = None
-        try_again = False
-        cards = []
-        last_message_type = 0
-        if userID not in MESSAGE_CREDS.keys():
-            chat_session, error = await create_session(cookies)
-            if error:
-                raise ChatHubException(error)
-            chat_session['isStartOfSession'] = True
-            chat_session['style'] = style
+        try:
+            result = await asyncio.wait_for(_send_message(userID, message, cookies, style, retry_on_disconnect=retry_on_disconnect), timeout=seconds)
+            return result
+        except asyncio.TimeoutError:
+            raise asyncio.TimeoutError(f"Function {_send_message.__name__} timed out after {seconds} seconds")
+
+
+async def _send_message(userID, message, cookies, style, retry_on_disconnect=True):
+    global MESSAGE_CREDS
+    chat_session = None
+    answer = None
+    image_query = None
+    try_again = False
+    cards = []
+    last_message_type = 0
+    if userID not in MESSAGE_CREDS.keys():
+        chat_session, error = await create_session(cookies)
+        if error:
+            raise ChatHubException(error)
+        chat_session['isStartOfSession'] = True
+        chat_session['style'] = style
+        chat_session['invocationId'] = 0
+        MESSAGE_CREDS[userID] = chat_session
+    else:
+        chat_session = MESSAGE_CREDS[userID]
+        if chat_session['style'] != style:
+            del MESSAGE_CREDS[userID]
+            return await send_message(userID, message, cookies, style)
+        chat_session['isStartOfSession'] = False
+        if chat_session['invocationId'] >= 8:
             chat_session['invocationId'] = 0
-            MESSAGE_CREDS[userID] = chat_session
         else:
-            chat_session = MESSAGE_CREDS[userID]
-            if chat_session['style'] != style:
-                del MESSAGE_CREDS[userID]
-                return await send_message(userID, message, cookies, style)
-            chat_session['isStartOfSession'] = False
-            if chat_session['invocationId'] >= 8:
-                chat_session['invocationId'] = 0
+            chat_session['invocationId'] += 1
+
+    chat_session['question'] = message
+
+    ws_messages = []
+    message_payload = await build_message(**chat_session)
+    async with websockets.connect(URL, ssl=True, ping_timeout=None,
+                                    ping_interval=None,
+                                    extensions=[
+                                        websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
+                                            server_max_window_bits=11,
+                                            client_max_window_bits=11,
+                                            compress_settings={
+                                                'memLevel': 4},
+                                        ), ]) as ws:
+        await ws.send('{"protocol":"json","version":1}')
+        await ws.recv()
+        await ws.send('{"type":6}')
+        await ws.send(json.dumps(message_payload) + '')
+        async for responses in ws:
+            js = json.loads(read_until_separator(responses))
+            if (
+                js['type'] == 2
+                and js['item']['result']['value'] == 'Throttled'
+            ):
+                raise ChatHubException(bot_strings.RATELIMIT_STRING)
+            last_message_type = js['type']
+            if last_message_type == 6:
+                await ws.send('{"type":6}')
+            elif last_message_type == 1:
+                ws_messages.append(js)
+            elif last_message_type in [2, 3]:
+                ws_messages.append(js)
+                break
+            elif last_message_type == 7:
+                if js['allowReconnect'] and retry_on_disconnect:
+                    try_again = True
+                    break
+                raise ChatHubException(
+                    bot_strings.CLOSE_MESSAGE_RECEIVED_STRING)
             else:
-                chat_session['invocationId'] += 1
-
-        chat_session['question'] = message
-
-        ws_messages = []
-        message_payload = await build_message(**chat_session)
-        async with websockets.connect(URL, ssl=True, ping_timeout=None,
-                                      ping_interval=None,
-                                      extensions=[
-                                          websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
-                                              server_max_window_bits=11,
-                                              client_max_window_bits=11,
-                                              compress_settings={
-                                                  'memLevel': 4},
-                                          ), ]) as ws:
-            await ws.send('{"protocol":"json","version":1}')
-            await ws.recv()
-            await ws.send('{"type":6}')
-            await ws.send(json.dumps(message_payload) + '')
-            async for responses in ws:
-                js = json.loads(read_until_separator(responses))
-                if (
-                    js['type'] == 2
-                    and js['item']['result']['value'] == 'Throttled'
-                ):
-                    raise ChatHubException(bot_strings.RATELIMIT_STRING)
-                last_message_type = js['type']
-                if last_message_type == 6:
-                    await ws.send('{"type":6}')
-                elif last_message_type == 1:
-                    ws_messages.append(js)
-                elif last_message_type in [2, 3]:
-                    ws_messages.append(js)
-                    break
-                elif last_message_type == 7:
-                    if js['allowReconnect'] and retry_on_disconnect:
-                        try_again = True
-                        break
-                    raise ChatHubException(
-                        bot_strings.CLOSE_MESSAGE_RECEIVED_STRING)
-                else:
-                    break
+                break
     if try_again:
         return await send_message(userID=userID, message=message, cookies=cookies, style=style, retry_on_disconnect=False)
     if ws_messages:
