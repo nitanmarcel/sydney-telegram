@@ -6,7 +6,10 @@ import uuid
 import pytz
 from datetime import datetime, timedelta
 from dateutil.parser import parse as dateparse
+from dataclasses import dataclass
 from enum import Enum
+from typing import List, Union
+from telethon.custom import Button
 
 import aiohttp
 import websockets
@@ -24,6 +27,15 @@ URL = 'wss://sydney.bing.com/sydney/ChatHub'
 class ChatHubException(Exception):
     pass
 
+@dataclass
+class ResponseTypeText:
+    answer: str
+    cards: List[str]
+
+@dataclass
+class ResponseTypeImage:
+    images: List[str]
+    caption: str
 
 class Style(Enum):
     CREATIVE = 1
@@ -221,13 +233,15 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
                             del MESSAGE_CREDS[userID]
                     break
     if image_query:
-        answer, error = await bot_img.generate_image(userID, response['text'], cookies)
+        images, error = await bot_img.generate_image(userID, response['text'], cookies)
         if error:
             raise ChatHubException(error)
+        if images:
+            return ResponseTypeImage(images, response['text'])
     if not answer:
         raise ChatHubException(
             f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
-    return answer, cards
+    return ResponseTypeText(answer, cards)
 
 
 async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, style, invocationId, **kwargs):

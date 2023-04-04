@@ -185,22 +185,25 @@ async def connect_chat(event):
 
 async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True):
     try:
-        buttons = []
-        message, cards = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
-        if cards:
-            buttons = [Button.url(card[0], card[1]) for card in cards]
-            buttons = [[buttons[i], buttons[i+1]] if i+1 <
-                       len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
-        if can_swipe_topics:
-            buttons.append([Button.inline(text='New Topic', data='newtopic')])
-        return message, buttons, query
+        buttons = None
+        answer = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
+        if isinstance(answer, bot_chat.ResponseTypeText):
+            if answer.cards:
+                buttons = [Button.url(card[0], card[1]) for card in answer.cards]
+                buttons = [[buttons[i], buttons[i+1]] if i+1 <
+                        len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
+                if can_swipe_topics:
+                    buttons.append([Button.inline(text='New Topic', data='newtopic')])
+            return answer.answer, buttons, query, False
+        if isinstance(answer, bot_chat.ResponseTypeImage):
+            return answer.images, None, answer.caption, True
     except bot_chat.ChatHubException as exc:
         return str(exc), None, query
     except asyncio.TimeoutError as exc:
         if retry_on_timeout:
             with contextlib.suppress(asyncio.TimeoutError):
                 return await answer_builder(userId, chatID, style, query, cookies, can_swipe_topics, retry_on_timeout=False)
-        return bot_strings.TIMEOUT_ERROR_STRING, None, query
+        return bot_strings.TIMEOUT_ERROR_STRING, None, query, False
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private and not e.via_bot_id))
@@ -234,12 +237,12 @@ async def message_handler_private(event):
         return
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
-            message, buttons, _ = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
+            answer, buttons, caption, is_image = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
                                                        cookies=user['cookies'], can_swipe_topics=True)
-            if not isinstance(message, list):
-                await event.reply(message, buttons=buttons)
+            if is_image:
+                await event.reply(caption, file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in answer], buttons=buttons)
             else:
-                await event.reply(file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in message], buttons=buttons)
+                await event.reply(answer, buttons=buttons)
         return
     state = STATES[event.sender_id]
     if state == State.FIRST_START:
@@ -424,15 +427,17 @@ async def handle_inline_send(event):
     if event.id in INLINE_QUERIES_TEXT[event.user_id]:
         suggestions = INLINE_QUERIES_TEXT[event.user_id]
         query = suggestions[event.id]
-    message, buttons, caption = await answer_builder(userId=event.user_id, query=query, style=user['style'], cookies=user['cookies'])
-    if isinstance(message, list):
-        message = '- ' + '\n- '.join([link.split('?')[0] for link in message])
-    if buttons:
-        await client.edit_message(
-            event.msg_id, text=f'❓ __{caption}__\n\n{message}', buttons=buttons
-        )
+    answer, buttons, caption, is_image = await answer_builder(userId=event.user_id, query=query, style=user['style'], cookies=user['cookies'])
+    if is_image:
+        images_list = '- ' + '\n- '.join([link.split('?')[0] for link in answer])
+        await client.edit_message(event.msg_id, text=f'{caption}\n\n{images_list}')
     else:
-        await client.edit_message(event.msg_id, text=f'❓ __{caption}__\n\n{message}')
+        if buttons:
+            await client.edit_message(
+                event.msg_id, text=f'❓ __{caption}__\n\n{answer}', buttons=buttons
+            )
+        else:
+            await client.edit_message(event.msg_id, text=f'❓ __{caption}__\n\n{answer}')
 
 
 @client.on(events.Raw(UpdateBotStopped))
@@ -455,14 +460,14 @@ async def message_handler_groups(event):
         message = event.text.replace(
             f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
         if not user:
-            message, buttons, _ = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None)
-            await event.reply(f'⚠️ {message}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
+            answer, buttons, caption, is_image = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None)
+            await event.reply(f'⚠️ {answer}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
             return
-        message, buttons, _ = await answer_builder(userId=user['id'], query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True)
-        if not isinstance(message, list):
-            await event.reply(message, buttons=buttons)
+        answer, buttons, caption, is_image = await answer_builder(userId=user['id'], query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True)
+        if is_image:
+            await event.reply(caption, file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in answer], buttons=buttons)
         else:
-            await event.reply(file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in message], buttons=buttons)
+            await event.reply(message, buttons=buttons)
 
 
 async def main():
