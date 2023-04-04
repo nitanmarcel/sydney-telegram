@@ -467,7 +467,7 @@ async def message_handler_groups(event):
         if is_image:
             await event.reply(caption, file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in answer], buttons=buttons)
         else:
-            await event.reply(message, buttons=buttons)
+            await event.reply(answer, buttons=buttons)
 
 
 async def main():
