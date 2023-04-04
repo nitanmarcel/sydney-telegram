@@ -105,11 +105,13 @@ async def remove_user(userID):
             return await User.delete.where(User.id == userID).gino.status()
     return None
 
+
 async def retrieve_data(userId):
     if userId in USERS.keys():
         result = USERS[userId]
         if result['cookies']:
-            cookies = [str(cookie).split(None, 1)[-1] for cookie in result['cookies']]
+            cookies = [str(cookie).split(None, 1)[-1]
+                       for cookie in result['cookies']]
             result['cookies'] = cookies
         return json.dumps(USERS[userId])
     return None
