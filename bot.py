@@ -35,7 +35,6 @@ import bot_suggestions
 import bot_markdown
 import uvloop
 
-
 class State(Enum):
     FIRST_START = 1
     AGREEMENT = 2
@@ -44,7 +43,6 @@ class State(Enum):
     UNKNOWN = 5
     SETTINGS = 6
     CONNECT_CHAT = 7
-
 
 class GdprState(Enum):
     STATE_PRIVACY_POLICY = 1
@@ -56,11 +54,9 @@ class GdprState(Enum):
     STATE_WHAT_WE_NOT_DO = 7
     STATE_RIGHTS_TO_PROCESS = 8
 
-
 class SydButton(Button):
     def init(self, button, *, resize, single_use, selective):
-        super().init(button, resize=resize, single_use=single_use, selective=selective)
-
+         super().init(button, resize=resize, single_use=single_use, selective=selective)
     @staticmethod
     def _is_inline(button):
         return isinstance(button, (
@@ -72,11 +68,9 @@ class SydButton(Button):
             InputKeyboardButtonUrlAuth,
             KeyboardButtonWebView
         ))
-
     @staticmethod
     def simple_web_app(text, url):
         return KeyboardButtonWebView(text, url)
-
 
 class SydButtonMethods(ButtonMethods):
     # https://github.com/LonamiWebs/Telethon/blob/v1/telethon/client/buttons.py
@@ -140,7 +134,6 @@ class SydButtonMethods(ButtonMethods):
         return ReplyKeyboardMarkup(
             rows, resize=resize, single_use=single_use, selective=selective)
 
-
 STATES = {}
 
 GDPR_STATES = {}
@@ -156,7 +149,6 @@ client = TelegramClient('sydney', bot_config.TELEGRAM_CLIENT_ID,
 
 client.parse_mode = bot_markdown.SydMarkdown()
 
-
 async def privacy_handler(event):
     if GDPR_STATES[event.sender_id] != GdprState.STATE_DELETE_DATA:
         buttons = [
@@ -171,8 +163,7 @@ async def privacy_handler(event):
         ]
         text = None
         if GDPR_STATES[event.sender_id] == GdprState.STATE_PRIVACY_POLICY:
-            text = bot_strings.PRIVACY_STRING.format(
-                bot_config.BOT_OWNER_USERNAME)
+            text = bot_strings.PRIVACY_STRING.format(bot_config.BOT_OWNER_USERNAME)
         elif GDPR_STATES[event.sender_id] == GdprState.STATE_COLLECTED_INFORMATION:
             text = bot_strings.PRIVACY_COLLECTED_INFORMATION_STRING
         elif GDPR_STATES[event.sender_id] == GdprState.STATE_WHY_WE_COLECT:
@@ -193,8 +184,7 @@ async def privacy_handler(event):
                 with BytesIO(str.encode(data)) as privacy_data:
                     privacy_data.name = f'{event.sender_id}.txt'
                     await event.reply(
-                        bot_strings.PRIVACY_RETRIEVE_DATA_STRING.format(
-                            sender.last_name, event.sender_id),
+                        bot_strings.PRIVACY_RETRIEVE_DATA_STRING.format(sender.last_name, event.sender_id),
                         file=privacy_data
                     )
             return
@@ -202,7 +192,8 @@ async def privacy_handler(event):
         buttons = [[SydButton.inline('yes')], [SydButton.inline('cancel')]]
         text = bot_strings.PRIVACY_DELETE_DATA_STRING
     await event.edit(text, buttons=buttons, link_preview=False)
-
+    
+        
 
 async def start_handler(event):
     if STATES[event.sender_id] == State.DONE:
@@ -282,30 +273,29 @@ async def donate_handler(event):
 async def handle_chat_connect(event):
     await event.edit(bot_strings.CHAT_CONNECT_STRING, buttons=SydButton.inline('Back', 'back'))
 
-
 async def connect_chat(event):
     pass
 
-
-async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True):
+async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True, is_private_chat=False):
     try:
-        buttons = None
+        buttons = []
         answer = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
         if isinstance(answer, bot_chat.ResponseTypeText):
             if answer.cards:
-                buttons = [SydButton.url(card[0], card[1])
-                           for card in answer.cards]
+                buttons = [SydButton.url(card[0], card[1]) for card in answer.cards]
                 buttons = [[buttons[i], buttons[i+1]] if i+1 <
-                           len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
+                        len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
             if answer.render_card:
-                buttons.append([SydButton.simple_web_app(
-                    answer.render_card.text, answer.render_card.url)])
+                if is_private_chat:
+                    see_more_btn = SydButton.simple_web_app
+                else:
+                    see_more_btn = SydButton.url
+                buttons.append([see_more_btn(answer.render_card.text, answer.render_card.url)])
             if can_swipe_topics:
-                buttons.append(
-                    [SydButton.inline(text='New Topic', data='newtopic')])
+                buttons.append([SydButton.inline(text='New Topic', data='newtopic')])
             if buttons:
                 buttons = SydButtonMethods.build_reply_markup(buttons, True)
-            return answer.answer, buttons, query, False
+            return answer.answer, buttons or None, query, False
         if isinstance(answer, bot_chat.ResponseTypeImage):
             return answer.images, None, answer.caption, True
     except bot_chat.ChatHubException as exc:
@@ -349,7 +339,7 @@ async def message_handler_private(event):
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
             answer, buttons, caption, is_image = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
-                                                                      cookies=user['cookies'], can_swipe_topics=True)
+                                                       cookies=user['cookies'], can_swipe_topics=True, is_private_chat=True)
             if is_image:
                 await event.reply(caption, file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in answer], buttons=buttons)
             else:
@@ -540,8 +530,7 @@ async def handle_inline_send(event):
         query = suggestions[event.id]
     answer, buttons, caption, is_image = await answer_builder(userId=event.user_id, query=query, style=user['style'], cookies=user['cookies'])
     if is_image:
-        images_list = '- ' + \
-            '\n- '.join([link.split('?')[0] for link in answer])
+        images_list = '- ' + '\n- '.join([link.split('?')[0] for link in answer])
         await client.edit_message(event.msg_id, text=f'{caption}\n\n{images_list}')
     else:
         if buttons:
@@ -575,7 +564,8 @@ async def message_handler_groups(event):
             answer, buttons, caption, is_image = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None)
             await event.reply(f'⚠️ {answer}', buttons=[SydButton.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
             return
-        answer, buttons, caption, is_image = await answer_builder(userId=user['id'], query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True)
+        answer, buttons, caption, is_image = await answer_builder(userId=user['id'], query=message, style=user['style'],
+                                                                    cookies=user['cookies'], can_swipe_topics=True)
         if is_image:
             await event.reply(caption, file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in answer], buttons=buttons)
         else:
