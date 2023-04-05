@@ -68,7 +68,7 @@ Here you can change your bot settings.
 """
 
 CHAT_CONNECT_STRING = """
-Enter the id of the chat you want to connect to.
+Enter the id of the chat you want to connect to. You can get this id, by using the `/id` command in the desired chat.
 """
 
 INVALID_CHAT_ID_STRING = """

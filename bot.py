@@ -453,6 +453,9 @@ async def handle_bot_stopped(event):
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: not e.is_private))
 async def message_handler_groups(event):
+    if event.text and event.text.split()[0] == '/id':
+        await event.reply(f'`{event.chat_id}`')
+        return
     if not event.mentioned or not event.text:
         return
     async with client.action(event.chat_id, 'typing'):
