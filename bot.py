@@ -160,14 +160,12 @@ async def settings_hanlder(event):
         str_style = 'Precise'
         await bot_chat.clear_session(event.sender_id)
     buttons = [
-        [
-            Button.inline(f'Style: {str_style}', 'style'),
-            Button.inline(f'Captions: {captions}', 'captions'),
-            Button.inline(f'Replies {replies}', 'replies'),
+            [Button.inline(f'Style: {str_style}', 'style'),
+            Button.inline(f'Captions: {captions}', 'captions')],
+            [Button.inline(f'Replies: {replies}', 'replies'),
             Button.inline('Remove Chat', 'rmchat')
             if chat
-            else Button.inline('Connect Chat', 'conchat'),
-        ],
+            else Button.inline('Connect Chat', 'conchat')],
         [Button.inline('Back', 'back')],
     ]
     await event.edit(bot_strings.SETTINGS_STRING, buttons=buttons)
