@@ -146,6 +146,8 @@ async def settings_hanlder(event):
     user = await bot_db.get_user(event.sender_id)
     style = bot_chat.Style(user['style'])
     chat = user['chat']
+    captions = user['captions']
+    replies = user['replies']
 
     str_style = None
     if style == bot_chat.Style.CREATIVE:
@@ -160,6 +162,8 @@ async def settings_hanlder(event):
     buttons = [
         [
             Button.inline(f'Style: {str_style}', 'style'),
+            Button.inline(f'Captions: {captions}', 'captions'),
+            Button.inline(f'Replies {replies}', 'replies'),
             Button.inline('Remove Chat', 'rmchat')
             if chat
             else Button.inline('Connect Chat', 'conchat'),
@@ -230,10 +234,10 @@ async def message_handler_private(event):
                 return
             user = await bot_db.get_user(chatID=int(event.text))
             if user:
-                await bot_db.insert_user(user['id'], cookies=user['cookies'], chat=None, style=user['style'])
+                await bot_db.insert_user(user['id'], cookies=user['cookies'], chat=None, style=user['style'], captions=user['captions'], replies=user['replies'])
             await client.send_message(int(event.text), bot_strings.CHAT_ID_CONNECTED_BROADCAST_STRING.format(sender.username or sender.first_name))
             user = await bot_db.get_user(event.sender_id)
-            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=int(event.text), style=user['style'])
+            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=int(event.text), style=user['style'], captions=user['captions'], replies=user['replies'])
         except ValueError:
             await event.reply(bot_strings.INVALID_CHAT_ID_STRING)
         return
@@ -270,7 +274,7 @@ async def message_handler_private(event):
         await event.reply(bot_strings.AUTHENTIFICATION_DONE_STRING.format(bot_config.TELEGRAM_BOT_USERNAME),
                           buttons=[Button.inline('Stay logged in', 'keepcookies')])
         STATES[event.sender_id] = State.DONE
-        await bot_db.insert_user(event.sender_id, cookies, style=bot_chat.Style.BALANCED.value, chat=None, keep_cookies=False)
+        await bot_db.insert_user(event.sender_id, cookies, style=bot_chat.Style.BALANCED.value, chat=None, keep_cookies=False, captions=True, replies=True)
         await start_handler(event)
     if state == State.SETTINGS:
         await settings_hanlder(event)
@@ -305,7 +309,7 @@ async def answer_callback_query(event):
         await start_handler(event)
     if data == 'keepcookies':
         user = await bot_db.get_user(event.sender_id)
-        save = await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=user['style'], keep_cookies=True)
+        save = await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=user['style'], keep_cookies=True, captions=user['captions'], replies=user['replies'])
         if save:
             message = await event.get_message()
             await event.edit(message.text)
@@ -316,18 +320,26 @@ async def answer_callback_query(event):
         user = await bot_db.get_user(event.sender_id)
         style = bot_chat.Style(user['style'])
         if style == bot_chat.Style.CREATIVE:
-            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=bot_chat.Style.BALANCED.value)
+            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=bot_chat.Style.BALANCED.value, captions=user['captions'], replies=user['replies'])
         if style == bot_chat.Style.BALANCED:
-            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=bot_chat.Style.PRECISE.value)
+            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=bot_chat.Style.PRECISE.value, captions=user['captions'], replies=user['replies'])
         if style == bot_chat.Style.PRECISE:
-            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=bot_chat.Style.CREATIVE.value)
+            await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=bot_chat.Style.CREATIVE.value, captions=user['captions'], replies=user['replies'])
+        await settings_hanlder(event)
+    if data == 'captions':
+        user = await bot_db.get_user(event.sender_id)
+        await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=user['style'], captions=not user['captions'], replies=user['replies'])
+        await settings_hanlder(event)
+    if data == 'replies':
+        user = await bot_db.get_user(event.sender_id)
+        await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=user['chat'], style=user['style'], captions=user['captions'], replies=not user['replies'])
         await settings_hanlder(event)
     if data == 'conchat':
         STATES[event.sender_id] = State.CONNECT_CHAT
         await handle_chat_connect(event)
     if data == 'rmchat':
         user = await bot_db.get_user(event.sender_id)
-        await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=None, style=user['style'])
+        await bot_db.insert_user(event.sender_id, cookies=user['cookies'], chat=None, style=user['style'], captions=user['captions'], replies=user['replies'])
         await settings_hanlder(event)
     if data == 'newtopic':
         original_message = await event.get_message()
@@ -434,12 +446,13 @@ async def handle_inline_send(event):
         images_list = '- ' + '\n- '.join([link.split('?')[0] for link in answer])
         await client.edit_message(event.msg_id, text=f'{caption}\n\n{images_list}')
     else:
+        text = f'❓ __{caption}__\n\n{answer}' if user['captions'] else f'{answer}'
         if buttons:
             await client.edit_message(
-                event.msg_id, text=f'❓ __{caption}__\n\n{answer}', buttons=buttons
+                event.msg_id, text=text, buttons=buttons
             )
         else:
-            await client.edit_message(event.msg_id, text=f'❓ __{caption}__\n\n{answer}')
+            await client.edit_message(event.msg_id, text=text)
 
 
 @client.on(events.Raw(UpdateBotStopped))
@@ -458,10 +471,12 @@ async def message_handler_groups(event):
         return
     if not event.mentioned or not event.text:
         return
+    user = await bot_db.get_user(userID=None, chatID=event.chat_id)
+    if not user:
+        user = await bot_db.get_user(userID=event.sender_id)
+    if event.reply_to_msg_id and not user['replies']:
+        return
     async with client.action(event.chat_id, 'typing'):
-        user = await bot_db.get_user(userID=None, chatID=event.chat_id)
-        if not user:
-            user = await bot_db.get_user(userID=event.sender_id)
         message = event.text.replace(
             f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
         if not user:

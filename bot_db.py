@@ -50,6 +50,8 @@ class User(db.Model):
     cookies = db.Column(db.LargeBinary())
     style = db.Column(db.Integer())
     chat = db.Column(db.BigInteger())
+    captions = db.Column(db.Boolean())
+    replies = db.Column(db.Boolean())
 
 
 USERS = {}
@@ -64,7 +66,10 @@ async def init(dbstring, encryption_key):
 
     all_users = await db.all(User.query)
     USERS = {u.id: {'cookies': _cookies_load(u.cookies) if u.cookies else None,
-                    'style': u.style, 'chat': u.chat, 'id': u.id} for u in all_users}
+                    'style': u.style, 'chat': u.chat,
+                     'captions': u.captions,
+                     'replies': u.replies,
+                     'id': u.id} for u in all_users}
     return USERS
 
 
@@ -80,19 +85,21 @@ async def get_user(userID=None, chatID=None):
     return user
 
 
-async def insert_user(userID, cookies=None, chat=None, style=None, keep_cookies=True):
+async def insert_user(userID, cookies=None, chat=None, style=None, keep_cookies=True, captions=True, replies=True):
     global USERS
     if userID not in USERS.keys():
-        USERS[userID] = {'cookies': None, 'Style': None, 'chat': chat}
+        USERS[userID] = {'cookies': None, 'Style': None, 'chat': chat, 'captions': captions, 'replies': replies}
     USERS[userID]['cookies'] = cookies
     USERS[userID]['chat'] = chat
     USERS[userID]['style'] = style
     USERS[userID]['id'] = userID
+    USERS[userID]['captions'] = captions
+    USERS[userID]['replies'] = replies
     user = await User.get(userID)
     if not user:
         return await User.create(id=userID, cookies=_cookies_save(cookies) if keep_cookies else None, chat=chat, style=style)
     await user.update(cookies=_cookies_save(USERS[userID]['cookies']) if keep_cookies else None,
-                      chat=USERS[userID]['chat'], style=USERS[userID]['style']).apply()
+                      chat=USERS[userID]['chat'], style=USERS[userID]['style'], captions=USERS[userID]['captions'], replies=USERS[userID]['replies']).apply()
     return USERS[userID]
 
 

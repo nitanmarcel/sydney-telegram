@@ -65,6 +65,8 @@ Here you can change your bot settings.
 
 - Style: Choose a conversation style, between Creative, Balanced and Precise.
 - Chat: Connect up to a chat that can conversate with the bot on your behalf. You need to be admin in the respective chat.
+- Captions: (Inline) If the bot should show the asked query in the inline response.
+- Replies: (Chats) If the bot should reply when someone in replies to it's message, or only on mentioning
 """
 
 CHAT_CONNECT_STRING = """
