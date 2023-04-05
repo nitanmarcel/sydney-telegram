@@ -22,8 +22,9 @@ def extract_code(text):
     return text, languages
 
 def parse_footnotes(text):
-    table = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
-    return re.sub(r"\[\^(\d+)\^\]", lambda match: f" {match.group(1).translate(table)}", text)
+    table = str.maketrans("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 
+                          "⁰¹²³⁴⁵⁶⁷⁸⁹ᵃᵇᶜᵈᵉᶠᵍʰᶦʲᵏˡᵐⁿᵒᵖᵠʳˢᵗᵘᵛʷˣʸᶻᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾᵠᴿˢᵀᵁⱽᵂˣʸᶻ")
+    return re.sub(r"\[\^(\w+)\^\]", lambda match: f" {match.group(1).translate(table)}", text)
 
 class SydMarkdown:
     @staticmethod
