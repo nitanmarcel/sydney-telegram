@@ -191,7 +191,8 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                     messages = responses['arguments'][-1]['messages']
                     for response in messages:
                         if 'text' in response.keys() and response['author'] == 'bot' and 'messageType' not in response.keys():
-                            answer = response['text']
+                            if response['text']:
+                                answer = response['text']
                             if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                                 _cards = []
                                 for _card in response['adaptiveCards']:
@@ -221,7 +222,8 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                             chat_session['numRemainingUserMessagesInConversation'] = responses['item']['throttling']['maxNumUserMessagesInConversation'] - responses['item']['throttling']['numUserMessagesInConversation']
                     for response in item['messages']:
                         if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
-                            answer = response['text']
+                            if response['text']:
+                                answer = response['text']
                             if 'adaptiveCards' in response.keys():
                                 for _card in response['adaptiveCards']:
                                     if _card['type'] == 'AdaptiveCard':
@@ -253,7 +255,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
             return ResponseTypeImage(images, response['text'])
     if not answer:
         if render_card:
-            answer = render_card.text
+            answer = f'[{render_card.text}]({render_card.url})'
         else:
             raise ChatHubException(
                 f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
@@ -265,14 +267,47 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
     now = datetime.now()
     formatted_date = now.strftime('%Y-%m-%dT%H:%M:%S%z')
 
-    optionsSets = ['nlu_direct_response_filter', 'deepleo', 'disable_emoji_spoken_text', 'responsible_ai_policy_235',
-                   'enablemm', 'galileo', 'serploc', 'contentability', 'dv3sugg', 'dlwebtrunc', 'glpromptv3plus']
+    optionsSets = [
+        "nlu_direct_response_filter",
+        "deepleo",
+        "disable_emoji_spoken_text",
+        "responsible_ai_policy_235",
+        "enablemm",
+        "galileo",
+        "recansgnd",
+        "dv3sugg",
+        "cachewriteext",
+        "e2ecachewrite",
+        "nodlcpcwrite",
+        "nointernalsugg",
+        "dlwebtrunc",
+        "glpromptv3plus"
+      ]
     if style == Style.CREATIVE:
-        optionsSets = ['nlu_direct_response_filter', 'deepleo', 'disable_emoji_spoken_text', 'responsible_ai_policy_235', 'enablemm',
-                       'h3imaginative', 'serploc', 'contentability', 'dv3sugg', 'clgalileo', 'gencontentv3', 'gencontentv3', 'clpostgalileo', 'galileoturncl']
+        optionsSets = [
+        "nlu_direct_response_filter",
+        "deepleo",
+        "disable_emoji_spoken_text",
+        "responsible_ai_policy_235",
+        "enablemm",
+        "h3imaginative",
+        "recansgnd",
+        "dv3sugg",
+        "clgalileo",
+        "gencontentv3"
+      ]
     if style == Style.PRECISE:
-        optionsSets.extend(
-            ['nlu_direct_response_filter', 'deepleo', 'disable_emoji_spoken_text', 'responsible_ai_policy_235', 'enablemm', 'h3precise', 'serploc', 'contentability', 'dv3sugg', 'clgalileo', 'clpostgalileo', 'galileoturncl'])
+        optionsSets = [
+        "nlu_direct_response_filter",
+        "deepleo",
+        "disable_emoji_spoken_text",
+        "responsible_ai_policy_235",
+        "enablemm",
+        "h3precise",
+        "recansgnd",
+        "dv3sugg",
+        "clgalileo"
+      ]
 
     payload = {
         "arguments": [
