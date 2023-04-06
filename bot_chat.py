@@ -126,10 +126,13 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
         chat_session['isStartOfSession'] = True
         chat_session['style'] = style
         chat_session['invocationId'] = 0
+        chat_session['conversationExpiryTime'] = None
+        chat_session['numRemainingUserMessagesInConversation'] = None
+
         MESSAGE_CREDS[userID] = chat_session
     else:
         chat_session = MESSAGE_CREDS[userID]
-        if chat_session['style'] != style:
+        if chat_session['style'] != style or (chat_session['conversationExpiryTime'] and pytz.utc.localize(datetime.now()) >= chat_session['conversationExpiryTime']) and chat_session['numRemainingUserMessagesInConversation'] == 0:
             del MESSAGE_CREDS[userID]
             return await send_message(userID, message, cookies, style)
         chat_session['isStartOfSession'] = False
@@ -212,21 +215,10 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                             item['result']['error']['message'])
                 if 'messages' in item.keys():
                     if 'conversationExpiryTime' in item.keys():
-                        conversationExpiryTime = item['conversationExpiryTime']
-                        conversationExpiryTime = dateparse(
-                            conversationExpiryTime)
-                    else:
-                        conversationExpiryTime = datetime.now() + timedelta(days=5)
-                        conversationExpiryTime = pytz.utc.localize(
-                            conversationExpiryTime)
-                    if 'throttling' in item.keys() and 'messages' in item.keys():
-                        maxNumUserMessagesInConversation = responses['item'][
-                            'throttling']['maxNumUserMessagesInConversation']
-                        numUserMessagesInConversation = responses['item'][
-                            'throttling']['numUserMessagesInConversation']
-                        if pytz.utc.localize(datetime.now()) >= conversationExpiryTime or numUserMessagesInConversation >= maxNumUserMessagesInConversation:
-                            del MESSAGE_CREDS[userID]
-                            return await send_message(userID=userID, message=message, cookies=cookies, style=style)
+                        chat_session['conversationExpiryTime'] = dateparse(item['conversationExpiryTime'])
+                    if 'throttling' in item.keys() and 'messages' in item.keys(): # numRemainingUserMessagesInConversation
+                        if 'throttling' in responses['item']:
+                            chat_session['numRemainingUserMessagesInConversation'] = responses['item']['throttling']['maxNumUserMessagesInConversation'] - responses['item']['throttling']['numUserMessagesInConversation']
                     for response in item['messages']:
                         if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
                             answer = response['text']
