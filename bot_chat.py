@@ -189,8 +189,6 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                     for response in messages:
                         if 'text' in response.keys() and response['author'] == 'bot' and 'messageType' not in response.keys():
                             answer = response['text']
-                            if not answer:
-                                continue
                             if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                                 _cards = []
                                 for _card in response['adaptiveCards']:
@@ -232,8 +230,6 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                     for response in item['messages']:
                         if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
                             answer = response['text']
-                            if not answer:
-                                continue
                             if 'adaptiveCards' in response.keys():
                                 for _card in response['adaptiveCards']:
                                     if _card['type'] == 'AdaptiveCard':
@@ -244,10 +240,8 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                                             iter(markdown_pattern))
                         elif response['author'] == 'bot' and 'messageType' in response.keys() and response['messageType'] == 'RenderCardRequest':
                             uri = 'https://www.bing.com/search?q='
-                            if not answer:
-                                answer = f'[{response["text"]}]({uri}{urllib.parse.quote(response["text"])})'
                             render_card = SydRenderCard(
-                                'Read More', f'{uri}{urllib.parse.quote(response["text"])}')
+                                response["text"], f'{uri}{urllib.parse.quote(response["text"])}')
                         elif 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                             body = response['adaptiveCards'][-1]['body'][0]
                             if 'text' in body:
@@ -266,8 +260,11 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
         if images:
             return ResponseTypeImage(images, response['text'])
     if not answer:
-        raise ChatHubException(
-            f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
+        if render_card:
+            answer = render_card.text
+        else:
+            raise ChatHubException(
+                f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
     return ResponseTypeText(answer, cards, render_card)
 
 

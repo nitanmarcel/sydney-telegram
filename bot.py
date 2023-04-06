@@ -195,7 +195,7 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
                 buttons = [[buttons[i], buttons[i+1]] if i+1 <
                         len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
                 if answer.render_card:
-                    buttons.append([Button.url(answer.render_card.text, answer.render_card.url)])
+                    buttons.append([Button.url('Read More', answer.render_card.url)])
                 if can_swipe_topics:
                     buttons.append([Button.inline(text='New Topic', data='newtopic')])
             return answer.answer, buttons or None, query, False
