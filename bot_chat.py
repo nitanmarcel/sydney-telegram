@@ -100,7 +100,7 @@ async def send_message(userID, message, cookies, style, retry_on_disconnect=True
     global SEMAPHORE_ITEMS
     if userID not in SEMAPHORE_ITEMS.keys():
         SEMAPHORE_ITEMS[userID] = asyncio.Semaphore(1)
-    seconds = 66
+    seconds = 120
     async with SEMAPHORE_ITEMS[userID]:
         try:
             result = await asyncio.wait_for(_send_message(userID, message, cookies, style, retry_on_disconnect=retry_on_disconnect), timeout=seconds)

@@ -50,14 +50,11 @@ async def generate_image(userID, query, cookies):
             else:
                 parsed_url = urlparse(str(response.url))
                 id = parse_qs(parsed_url.query)['id'][0]
-                async with session.get(f'https://www.bing.com/images/create/async/results/{id}?q={query}') as response:
-                    if response.status != 200:
-                        error = bot_strings.PROCESSING_ERROR_STRING
-                    else:
+                async with session.get(f'https://www.bing.com/images/create/async/results/{id}?q={quote(query)}') as response:
+                    if response.status == 200:
                         while not images:
                             images = await get_images(str(response.url), session)
                             if TRIES[userID] > MAX_TRIES:
-                                error = bot_strings.PROCESSING_ERROR_STRING
                                 break
                             await asyncio.sleep(5)
 
