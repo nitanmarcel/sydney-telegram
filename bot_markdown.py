@@ -3,14 +3,13 @@ from telethon import types
 import re
 
 def extract_code(text):
-    md_languages = ['actionscript3', 'apache', 'applescript', 'asp', 'brainfuck', 'c', 'cfm', 'clojure', 'cmake', 'coffee-script', 'coffeescript', 'coffee', 'cpp', 'c++', 'cs', 'csharp', 'css', 'csv', 'bash', 'diff', 'elixir', 'erb', 'html', 'embedded', 'ruby', 'go', 'haml', 'http', 'java', 'javascript', 'json', 'jsx', 'less', 'lolcode', 'make', 'makefile', 'markdown', 'matlab', 'nginx', 'objectivec', 'pascal', 'php', 'perl', 'python', 'profile', 'python', 'profiler', 'output', 'rust', 'salt', 'saltstate', 'salt', 'shell', 'sh', 'zsh', 'bash', 'shell', 'scripting', 'scss', 'sql', 'svg', 'swift', 'rb', 'jruby', 'ruby', 'ruby', 'smalltalk', 'vim', 'viml', 'vim', 'script', 'volt', 'vhdl', 'vue', 'xml', 'xml', 'and', 'also', 'used', 'for', 'html', 'with', 'inline', 'css', 'and', 'javascript', 'yaml']
     pattern = r'```([\w+#]*)\n(.+?)```'
     matches = re.findall(pattern, text, flags=re.DOTALL)
     languages = []
     for match in matches:
         language = match[0]
         code = match[1]
-        if language.lower() in md_languages:
+        if language and language[0].islower():
             code = code.replace(language, '', 1).lstrip()
             languages.append(language.lower())
             text = text.replace(f'```{language}\n{code}```', f'```{code}```')
@@ -25,7 +24,8 @@ def parse_footnotes(text):
     table = str.maketrans("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 
                           "⁰¹²³⁴⁵⁶⁷⁸⁹ᵃᵇᶜᵈᵉᶠᵍʰᶦʲᵏˡᵐⁿᵒᵖᵠʳˢᵗᵘᵛʷˣʸᶻᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾᵠᴿˢᵀᵁⱽᵂˣʸᶻ")
     return re.sub(r"\[\^(\w+)\^\]", lambda match: f" {match.group(1).translate(table)}", text)
-
+    
+    return pattern.sub(replace, text)
 class SydMarkdown:
     @staticmethod
     def parse(text):
