@@ -114,6 +114,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
     global MESSAGE_CREDS
     chat_session = None
     answer = None
+    update = None
     image_query = None
     try_again = False
     cards = []
@@ -170,7 +171,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                 await ws.send('{"type":6}')
             elif last_message_type == 1:
                 ws_messages.append(js)
-            elif last_message_type in [2, 3]:
+            elif last_message_type == 2:
                 ws_messages.append(js)
                 break
             elif last_message_type == 7:
@@ -192,7 +193,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                     for response in messages:
                         if 'text' in response.keys() and response['author'] == 'bot' and 'messageType' not in response.keys():
                             if response['text']:
-                                answer = response['text']
+                                update = response['text']
                             if 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                                 _cards = []
                                 for _card in response['adaptiveCards']:
@@ -206,7 +207,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                         elif 'adaptiveCards' in response.keys() and len(response['adaptiveCards']) > 0:
                             body = response['adaptiveCards'][-1]['body'][0]
                             if 'text' in body.keys():
-                                answer = response['adaptiveCards'][-1]['body'][0]['text']
+                                update = response['adaptiveCards'][-1]['body'][0]['text']
             if responses['type'] == 2:
                 cards = []
                 item = responses['item']
@@ -253,13 +254,13 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
             raise ChatHubException(error)
         if images:
             return ResponseTypeImage(images, response['text'])
-    if not answer:
+    if not answer or not update:
         if render_card:
             answer = f'[{render_card.text}]({render_card.url})'
         else:
             raise ChatHubException(
                 f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
-    return ResponseTypeText(answer, cards, render_card)
+    return ResponseTypeText(answer or update, cards, render_card)
 
 
 async def build_message(question, clientID, traceID, conversationId, conversationSignature, isStartOfSession, style, invocationId, **kwargs):
