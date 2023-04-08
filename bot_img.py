@@ -40,7 +40,7 @@ async def generate_image(userID, query, cookies, request_id=None):
     images, error = [], None
 
     if userID in TRIES.keys():
-        return [], bot_strings.POCESSING_ALREADY_STRING
+        return [], bot_strings.POCESSING_ALREADY_STRING, False
 
     TRIES[userID] = 0
     canceled = False
