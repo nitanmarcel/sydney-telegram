@@ -2,6 +2,7 @@ from telethon.extensions import markdown
 from telethon import types
 import re
 
+
 def extract_code(text):
     pattern = r'```([\w+#]*)\n(.+?)```'
     matches = re.findall(pattern, text, flags=re.DOTALL)
@@ -20,12 +21,15 @@ def extract_code(text):
     languages.extend('' for _ in matches)
     return text, languages
 
+
 def parse_footnotes(text):
-    table = str.maketrans("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 
+    table = str.maketrans("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
                           "⁰¹²³⁴⁵⁶⁷⁸⁹ᵃᵇᶜᵈᵉᶠᵍʰᶦʲᵏˡᵐⁿᵒᵖᵠʳˢᵗᵘᵛʷˣʸᶻᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾᵠᴿˢᵀᵁⱽᵂˣʸᶻ")
     return re.sub(r"\[\^(\w+)\^\]", lambda match: f" {match.group(1).translate(table)}", text)
-    
+
     return pattern.sub(replace, text)
+
+
 class SydMarkdown:
     @staticmethod
     def parse(text):
@@ -36,9 +40,11 @@ class SydMarkdown:
         for i, e in enumerate(entities):
             if isinstance(e, types.MessageEntityPre):
                 if language := languages[index]:
-                    entities[i] = types.MessageEntityPre(e.offset, e.length, language)
+                    entities[i] = types.MessageEntityPre(
+                        e.offset, e.length, language)
                 index += 1
         return text, entities
+
     @staticmethod
     def unparse(text, entities):
         return markdown.unparse(text, entities)

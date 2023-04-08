@@ -19,6 +19,9 @@ MESSAGE_CREDS = {}
 
 SEMAPHORE_ITEMS = {}
 
+
+PENDING_REQUESTS = {}
+
 URL = 'wss://sydney.bing.com/sydney/ChatHub'
 
 
@@ -61,6 +64,7 @@ def read_until_separator(message):
 
 
 async def clear_session(userID):
+    global MESSAGE_CREDS
     if userID in MESSAGE_CREDS.keys():
         del MESSAGE_CREDS[userID]
         return True
@@ -69,6 +73,33 @@ async def clear_session(userID):
 
 async def get_session(userID):
     return MESSAGE_CREDS[userID] if userID in MESSAGE_CREDS.keys() else None
+
+
+async def set_pending(userId, ws):
+    global PENDING_REQUESTS
+    PENDING_REQUESTS[userId] = ws
+
+
+async def cancel_request(userId):
+    global PENDING_REQUESTS
+    if userId in PENDING_REQUESTS.keys():
+        ws = PENDING_REQUESTS[userId]
+        if ws.open:
+            await ws.close()
+        del PENDING_REQUESTS[userId]
+        return True
+    return False
+
+
+async def is_pending(userId):
+    return userId in PENDING_REQUESTS.keys()
+
+
+async def finish_request(userId):
+    global PENDING_REQUESTS
+    cancel = await cancel_request(userId)
+    if cancel:
+        del PENDING_REQUESTS[userId]
 
 
 async def create_session(cookies):
@@ -114,6 +145,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
     chat_session = None
     answer = None
     update = None
+    canceled = False
     image_query = None
     try_again = False
     cards = []
@@ -157,6 +189,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                                           compress_settings={
                                               'memLevel': 4},
                                       ), ]) as ws:
+        await set_pending(userID, ws)
         await ws.send('{"protocol":"json","version":1}')
         await ws.recv()
         await ws.send('{"type":6}')
@@ -253,17 +286,21 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                             del MESSAGE_CREDS[userID]
                     break
     if image_query:
-        images, error = await bot_img.generate_image(userID, response['text'], cookies)
+        images, error, canceled = await bot_img.generate_image(userID, response['text'], cookies)
         if error:
+            await finish_request(userID)
             raise ChatHubException(error)
         if images:
+            await finish_request(userID)
             return ResponseTypeImage(images, response['text'])
-    if not answer or not update:
+    if not answer and not update:
         if render_card:
             answer = f'[{render_card.text}]({render_card.url})'
-        else:
+        if last_message_type not in [1, 2, 6, 7]:
+            await finish_request(userID)
             raise ChatHubException(
                 f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
+    await finish_request(userID)
     return ResponseTypeText(answer or update, cards, render_card)
 
 

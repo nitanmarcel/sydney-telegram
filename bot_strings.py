@@ -101,6 +101,14 @@ CLOSE_MESSAGE_RECEIVED_STRING = """
 Close message received from server.
 """
 
+PROCESSING_IN_PROGRESS = """
+Please wait...
+"""
+
+PROCESSING_CANCEL = """
+Stop Responding
+"""
+
 POCESSING_ALREADY_STRING = """
 Processing of the last query didn't finish yet.
 """

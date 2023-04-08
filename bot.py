@@ -22,6 +22,7 @@ import bot_suggestions
 import bot_markdown
 import uvloop
 
+
 class State(Enum):
     FIRST_START = 1
     AGREEMENT = 2
@@ -30,6 +31,7 @@ class State(Enum):
     UNKNOWN = 5
     SETTINGS = 6
     CONNECT_CHAT = 7
+
 
 class GdprState(Enum):
     STATE_PRIVACY_POLICY = 1
@@ -40,6 +42,7 @@ class GdprState(Enum):
     STATE_WHAT_WE_DO = 6
     STATE_WHAT_WE_NOT_DO = 7
     STATE_RIGHTS_TO_PROCESS = 8
+
 
 STATES = {}
 
@@ -56,6 +59,7 @@ client = TelegramClient('sydney', bot_config.TELEGRAM_CLIENT_ID,
 
 client.parse_mode = bot_markdown.SydMarkdown()
 
+
 async def privacy_handler(event):
     if GDPR_STATES[event.sender_id] != GdprState.STATE_DELETE_DATA:
         buttons = [
@@ -70,7 +74,8 @@ async def privacy_handler(event):
         ]
         text = None
         if GDPR_STATES[event.sender_id] == GdprState.STATE_PRIVACY_POLICY:
-            text = bot_strings.PRIVACY_STRING.format(bot_config.BOT_OWNER_USERNAME)
+            text = bot_strings.PRIVACY_STRING.format(
+                bot_config.BOT_OWNER_USERNAME)
         elif GDPR_STATES[event.sender_id] == GdprState.STATE_COLLECTED_INFORMATION:
             text = bot_strings.PRIVACY_COLLECTED_INFORMATION_STRING
         elif GDPR_STATES[event.sender_id] == GdprState.STATE_WHY_WE_COLECT:
@@ -91,7 +96,8 @@ async def privacy_handler(event):
                 with BytesIO(str.encode(data)) as privacy_data:
                     privacy_data.name = f'{event.sender_id}.txt'
                     await event.reply(
-                        bot_strings.PRIVACY_RETRIEVE_DATA_STRING.format(sender.last_name, event.sender_id),
+                        bot_strings.PRIVACY_RETRIEVE_DATA_STRING.format(
+                            sender.last_name, event.sender_id),
                         file=privacy_data
                     )
             return
@@ -99,8 +105,7 @@ async def privacy_handler(event):
         buttons = [[Button.inline('yes')], [Button.inline('cancel')]]
         text = bot_strings.PRIVACY_DELETE_DATA_STRING
     await event.edit(text, buttons=buttons, link_preview=False)
-    
-        
+
 
 async def start_handler(event):
     if STATES[event.sender_id] == State.DONE:
@@ -160,12 +165,12 @@ async def settings_hanlder(event):
         str_style = 'Precise'
         await bot_chat.clear_session(event.sender_id)
     buttons = [
-            [Button.inline(f'Style: {str_style}', 'style'),
-            Button.inline(f'Captions: {captions}', 'captions')],
-            [Button.inline(f'Replies: {replies}', 'replies'),
-            Button.inline('Remove Chat', 'rmchat')
-            if chat
-            else Button.inline('Connect Chat', 'conchat')],
+        [Button.inline(f'Style: {str_style}', 'style'),
+         Button.inline(f'Captions: {captions}', 'captions')],
+        [Button.inline(f'Replies: {replies}', 'replies'),
+         Button.inline('Remove Chat', 'rmchat')
+         if chat
+         else Button.inline('Connect Chat', 'conchat')],
         [Button.inline('Back', 'back')],
     ]
     await event.edit(bot_strings.SETTINGS_STRING, buttons=buttons)
@@ -182,8 +187,10 @@ async def donate_handler(event):
 async def handle_chat_connect(event):
     await event.edit(bot_strings.CHAT_CONNECT_STRING, buttons=Button.inline('Back', 'back'))
 
+
 async def connect_chat(event):
     pass
+
 
 async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True):
     try:
@@ -191,13 +198,16 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
         answer = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
         if isinstance(answer, bot_chat.ResponseTypeText):
             if answer.cards:
-                buttons = [Button.url(card[0], card[1]) for card in answer.cards]
+                buttons = [Button.url(card[0], card[1])
+                           for card in answer.cards]
                 buttons = [[buttons[i], buttons[i+1]] if i+1 <
-                        len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
+                           len(buttons) else [buttons[i]] for i in range(0, len(buttons), 2)]
                 if answer.render_card:
-                    buttons.append([Button.url('Read More', answer.render_card.url)])
+                    buttons.append(
+                        [Button.url('Read More', answer.render_card.url)])
             if can_swipe_topics:
-                buttons.append([Button.inline(text='New Topic', data='newtopic')])
+                buttons.append(
+                    [Button.inline(text='New Topic', data='newtopic')])
             return answer.answer, buttons or None, query, False
         if isinstance(answer, bot_chat.ResponseTypeImage):
             return answer.images, None, answer.caption, True
@@ -241,8 +251,12 @@ async def message_handler_private(event):
         return
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
+            processing_message = await event.reply(bot_strings.PROCESSING_IN_PROGRESS, buttons=[Button.inline(bot_strings.PROCESSING_CANCEL, 'ws_close')])
             answer, buttons, caption, is_image = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
-                                                       cookies=user['cookies'], can_swipe_topics=True)
+                                                                      cookies=user['cookies'], can_swipe_topics=True)
+            await processing_message.delete()
+            if not answer:
+                return
             if is_image:
                 await event.reply(caption, file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in answer], buttons=buttons)
             else:
@@ -395,6 +409,8 @@ async def answer_callback_query(event):
         if event.sender_id in GDPR_STATES.keys() and GDPR_STATES[event.sender_id] == GdprState.STATE_DELETE_DATA:
             GDPR_STATES[event.sender_id] = GdprState.STATE_PRIVACY_POLICY
             await privacy_handler(event)
+    if data == 'ws_close':
+        await bot_chat.cancel_request(event.chat_id)
     await event.answer()
 
 
@@ -415,7 +431,7 @@ async def answer_inline_query(event):
 
     suggestions = await bot_suggestions.get_suggestions(message)
     articles = [builder.article(message, text=f'❓ __{message}__', buttons=[
-                                Button.inline('Please wait...')])]
+                                Button.inline(bot_strings.PROCESSING_CANCEL, 'ws_close')])]
 
     if suggestions:
         for suggestion in suggestions:
@@ -424,7 +440,7 @@ async def answer_inline_query(event):
                 INLINE_QUERIES_TEXT[event.sender_id].update(
                     {suggestion['id']: message})
                 articles.append(builder.article(message, text=f'❓ __{message}__', buttons=[
-                                Button.inline('Please wait...')], id=suggestion['id']))
+                                Button.inline(bot_strings.PROCESSING_CANCEL, 'ws_close')], id=suggestion['id']))
 
     await event.answer(articles)
 
@@ -440,8 +456,12 @@ async def handle_inline_send(event):
         suggestions = INLINE_QUERIES_TEXT[event.user_id]
         query = suggestions[event.id]
     answer, buttons, caption, is_image = await answer_builder(userId=event.user_id, query=query, style=user['style'], cookies=user['cookies'])
+    if not answer:
+        await event.delete()
+        return
     if is_image:
-        images_list = '- ' + '\n- '.join([link.split('?')[0] for link in answer])
+        images_list = '- ' + \
+            '\n- '.join([link.split('?')[0] for link in answer])
         await client.edit_message(event.msg_id, text=f'{caption}\n\n{images_list}')
     else:
         text = f'❓ __{caption}__\n\n{answer}' if user['captions'] else f'{answer}'
@@ -479,9 +499,15 @@ async def message_handler_groups(event):
             f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
         if not user:
             answer, buttons, caption, is_image = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None)
-            await event.reply(f'⚠️ {answer}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
+            if not answer:
+                return
+            await event.edit(f'⚠️ {answer}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
             return
+        processing_message = await event.reply(bot_strings.PROCESSING_IN_PROGRESS, buttons=[Button.inline(bot_strings.PROCESSING_CANCEL, 'ws_close')])
         answer, buttons, caption, is_image = await answer_builder(userId=event.chat_id, query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True)
+        await processing_message.delete()
+        if not answer:
+            return
         if is_image:
             await event.reply(caption, file=[InputMediaPhotoExternal(url=link.split('?')[0]) for link in answer], buttons=buttons)
         else:

@@ -4,6 +4,7 @@ from urllib.parse import quote, parse_qs, urlparse
 from bs4 import BeautifulSoup
 
 import bot_strings
+import bot_chat
 
 TRIES = {}
 MAX_TRIES = 3
@@ -37,12 +38,12 @@ async def generate_image(userID, query, cookies):
               'FORM': 'GENCRE'}
 
     images, error = [], None
-    url = None
 
     if userID in TRIES.keys():
         return [], bot_strings.POCESSING_ALREADY_STRING
 
     TRIES[userID] = 0
+    canceled = False
     async with aiohttp.ClientSession(headers=headers, cookie_jar=cookies) as session:
         async with session.post('https://www.bing.com/images/create', params=params, data=data) as response:
             if not response.history:
@@ -53,10 +54,13 @@ async def generate_image(userID, query, cookies):
                 async with session.get(f'https://www.bing.com/images/create/async/results/{id}?q={quote(query)}') as response:
                     if response.status == 200:
                         while not images:
+                            if not (await bot_chat.is_pending(userID)):
+                                canceled = True
+                                break
                             images = await get_images(str(response.url), session)
                             if TRIES[userID] > MAX_TRIES:
                                 break
                             await asyncio.sleep(5)
 
     del TRIES[userID]
-    return images, error
+    return images, error, canceled

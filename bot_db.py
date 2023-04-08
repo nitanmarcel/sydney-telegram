@@ -67,9 +67,9 @@ async def init(dbstring, encryption_key):
     all_users = await db.all(User.query)
     USERS = {u.id: {'cookies': _cookies_load(u.cookies) if u.cookies else None,
                     'style': u.style, 'chat': u.chat,
-                     'captions': u.captions,
-                     'replies': u.replies,
-                     'id': u.id} for u in all_users}
+                    'captions': u.captions,
+                    'replies': u.replies,
+                    'id': u.id} for u in all_users}
     return USERS
 
 
@@ -88,7 +88,8 @@ async def get_user(userID=None, chatID=None):
 async def insert_user(userID, cookies=None, chat=None, style=None, keep_cookies=True, captions=True, replies=True):
     global USERS
     if userID not in USERS.keys():
-        USERS[userID] = {'cookies': None, 'Style': None, 'chat': chat, 'captions': captions, 'replies': replies}
+        USERS[userID] = {'cookies': None, 'Style': None,
+                         'chat': chat, 'captions': captions, 'replies': replies}
     USERS[userID]['cookies'] = cookies
     USERS[userID]['chat'] = chat
     USERS[userID]['style'] = style
@@ -112,11 +113,13 @@ async def remove_user(userID):
             return await User.delete.where(User.id == userID).gino.status()
     return None
 
+
 async def retrieve_data(userId):
     if userId in USERS.keys():
         result = USERS[userId]
         if result['cookies']:
-            cookies = [str(cookie).split(None, 1)[-1] for cookie in result['cookies']]
+            cookies = [str(cookie).split(None, 1)[-1]
+                       for cookie in result['cookies']]
             result['cookies'] = cookies
         return json.dumps(USERS[userId])
     return None
