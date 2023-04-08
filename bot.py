@@ -410,7 +410,24 @@ async def answer_callback_query(event):
             GDPR_STATES[event.sender_id] = GdprState.STATE_PRIVACY_POLICY
             await privacy_handler(event)
     if data == 'ws_close':
-        await bot_chat.cancel_request(event.chat_id)
+        original_message = await event.get_message()
+        if message := original_message:
+            if bool(message.reply_to_msg_id):
+                reply_message = await message.get_reply_message()
+                if reply_message:
+                    message = reply_message
+            if message.sender_id == event.sender_id:
+                user = await bot_db.get_user(message.sender_id)
+                if not user:
+                    user = await bot_db.get_user(chatID=message.chat_id)
+                if user:
+                    buttons = None
+                    if original_message.buttons and len(original_message.buttons) > 1:
+                        buttons = original_message.buttons[:-1]
+                    await event.edit(text=original_message.text, file=original_message.file, buttons=buttons)
+                    await bot_chat.cancel_request(event.chat_id)
+        else:
+            await event.answer(bot_strings.TOPIC_EXPIRES_STRING, alert=True)
     await event.answer()
 
 
@@ -457,7 +474,7 @@ async def handle_inline_send(event):
         query = suggestions[event.id]
     answer, buttons, caption, is_image = await answer_builder(userId=event.user_id, query=query, style=user['style'], cookies=user['cookies'])
     if not answer:
-        await event.delete()
+        await client.edit_message(event.msg_id, text=bot_strings.PROCESSING_CANCELED_STRING)
         return
     if is_image:
         images_list = '- ' + \

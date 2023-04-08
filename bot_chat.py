@@ -4,11 +4,13 @@ import json
 import re
 import uuid
 import urllib.parse
+import contextlib
 from datetime import datetime
 from dateutil.parser import parse as dateparse
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
+from websockets import exceptions as ws_exceptions
 
 import aiohttp
 import websockets
@@ -97,9 +99,7 @@ async def is_pending(userId):
 
 async def finish_request(userId):
     global PENDING_REQUESTS
-    cancel = await cancel_request(userId)
-    if cancel:
-        del PENDING_REQUESTS[userId]
+    return await cancel_request(userId)
 
 
 async def create_session(cookies):
@@ -145,7 +145,6 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
     chat_session = None
     answer = None
     update = None
-    canceled = False
     image_query = None
     try_again = False
     cards = []
@@ -180,43 +179,44 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
 
     ws_messages = []
     message_payload = await build_message(**chat_session)
-    async with websockets.connect(URL, ssl=True, ping_timeout=None,
-                                  ping_interval=None,
-                                  extensions=[
-                                      websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
-                                          server_max_window_bits=11,
-                                          client_max_window_bits=11,
-                                          compress_settings={
-                                              'memLevel': 4},
-                                      ), ]) as ws:
-        await set_pending(userID, ws)
-        await ws.send('{"protocol":"json","version":1}')
-        await ws.recv()
-        await ws.send('{"type":6}')
-        await ws.send(json.dumps(message_payload) + '')
-        async for responses in ws:
-            js = json.loads(read_until_separator(responses))
-            if (
-                js['type'] == 2
-                and js['item']['result']['value'] == 'Throttled'
-            ):
-                raise ChatHubException(bot_strings.RATELIMIT_STRING)
-            last_message_type = js['type']
-            if last_message_type == 6:
-                await ws.send('{"type":6}')
-            elif last_message_type == 1:
-                ws_messages.append(js)
-            elif last_message_type == 2:
-                ws_messages.append(js)
-                break
-            elif last_message_type == 7:
-                if js['allowReconnect'] and retry_on_disconnect:
-                    try_again = True
+    with contextlib.suppress(ws_exceptions.ConnectionClosedOK):
+        async with websockets.connect(URL, ssl=True, ping_timeout=None,
+                                    ping_interval=None,
+                                    extensions=[
+                                        websockets.extensions.permessage_deflate.ClientPerMessageDeflateFactory(
+                                            server_max_window_bits=11,
+                                            client_max_window_bits=11,
+                                            compress_settings={
+                                                'memLevel': 4},
+                                        ), ]) as ws:
+            await set_pending(userID, ws)
+            await ws.send('{"protocol":"json","version":1}')
+            await ws.recv()
+            await ws.send('{"type":6}')
+            await ws.send(json.dumps(message_payload) + '')
+            async for responses in ws:
+                js = json.loads(read_until_separator(responses))
+                if (
+                    js['type'] == 2
+                    and js['item']['result']['value'] == 'Throttled'
+                ):
+                    raise ChatHubException(bot_strings.RATELIMIT_STRING)
+                last_message_type = js['type']
+                if last_message_type == 6:
+                    await ws.send('{"type":6}')
+                elif last_message_type == 1:
+                    ws_messages.append(js)
+                elif last_message_type == 2:
+                    ws_messages.append(js)
                     break
-                raise ChatHubException(
-                    bot_strings.CLOSE_MESSAGE_RECEIVED_STRING)
-            else:
-                break
+                elif last_message_type == 7:
+                    if js['allowReconnect'] and retry_on_disconnect:
+                        try_again = True
+                        break
+                    raise ChatHubException(
+                        bot_strings.CLOSE_MESSAGE_RECEIVED_STRING)
+                else:
+                    break
     if try_again:
         return await send_message(userID=userID, message=message, cookies=cookies, style=style, retry_on_disconnect=False)
     if ws_messages:
