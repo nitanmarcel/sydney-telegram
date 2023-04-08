@@ -426,8 +426,10 @@ async def answer_callback_query(event):
                         buttons = original_message.buttons[:-1]
                     await event.edit(text=original_message.text, file=original_message.file, buttons=buttons)
                     await bot_chat.cancel_request(event.chat_id)
+            else:
+                await event.answer(bot_strings.TOPIC_EXPIRES_STRING, alert=True)
         else:
-            await event.answer(bot_strings.TOPIC_EXPIRES_STRING, alert=True)
+            await bot_chat.cancel_request(event.sender_id)
     await event.answer()
 
 
