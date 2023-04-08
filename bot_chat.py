@@ -3,9 +3,8 @@ import datetime
 import json
 import re
 import uuid
-import pytz
 import urllib.parse
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil.parser import parse as dateparse
 from dataclasses import dataclass
 from enum import Enum
@@ -133,8 +132,11 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
         MESSAGE_CREDS[userID] = chat_session
     else:
         chat_session = MESSAGE_CREDS[userID]
-        if chat_session['style'] != style or (chat_session['conversationExpiryTime'] and pytz.utc.localize(datetime.now()) >= chat_session['conversationExpiryTime']) and chat_session['numRemainingUserMessagesInConversation'] == 0:
-            del MESSAGE_CREDS[userID]
+        if chat_session['style'] != style or (
+            chat_session['conversationExpiryTime'] and
+            chat_session['conversationExpiryTime'].timestamp() < datetime.utcnow().timestamp() or
+            chat_session['numRemainingUserMessagesInConversation'] == 0
+        ):
             return await send_message(userID, message, cookies, style)
         chat_session['isStartOfSession'] = False
         if chat_session['invocationId'] >= 8:
@@ -217,10 +219,12 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                             item['result']['error']['message'])
                 if 'messages' in item.keys():
                     if 'conversationExpiryTime' in item.keys():
-                        chat_session['conversationExpiryTime'] = dateparse(item['conversationExpiryTime'])
-                    if 'throttling' in item.keys() and 'messages' in item.keys(): # numRemainingUserMessagesInConversation
+                        chat_session['conversationExpiryTime'] = dateparse(
+                            item['conversationExpiryTime'])
+                    if 'throttling' in item.keys() and 'messages' in item.keys():  # numRemainingUserMessagesInConversation
                         if 'throttling' in responses['item']:
-                            chat_session['numRemainingUserMessagesInConversation'] = responses['item']['throttling']['maxNumUserMessagesInConversation'] - responses['item']['throttling']['numUserMessagesInConversation']
+                            chat_session['numRemainingUserMessagesInConversation'] = responses['item']['throttling'][
+                                'maxNumUserMessagesInConversation'] - responses['item']['throttling']['numUserMessagesInConversation']
                     for response in item['messages']:
                         if response['author'] == 'bot' and 'messageType' not in response.keys() and 'text' in response.keys():
                             if response['text']:
@@ -283,32 +287,32 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
         "nointernalsugg",
         "dlwebtrunc",
         "glpromptv3plus"
-      ]
+    ]
     if style == Style.CREATIVE:
         optionsSets = [
-        "nlu_direct_response_filter",
-        "deepleo",
-        "disable_emoji_spoken_text",
-        "responsible_ai_policy_235",
-        "enablemm",
-        "h3imaginative",
-        "recansgnd",
-        "dv3sugg",
-        "clgalileo",
-        "gencontentv3"
-      ]
+            "nlu_direct_response_filter",
+            "deepleo",
+            "disable_emoji_spoken_text",
+            "responsible_ai_policy_235",
+            "enablemm",
+            "h3imaginative",
+            "recansgnd",
+            "dv3sugg",
+            "clgalileo",
+            "gencontentv3"
+        ]
     if style == Style.PRECISE:
         optionsSets = [
-        "nlu_direct_response_filter",
-        "deepleo",
-        "disable_emoji_spoken_text",
-        "responsible_ai_policy_235",
-        "enablemm",
-        "h3precise",
-        "recansgnd",
-        "dv3sugg",
-        "clgalileo"
-      ]
+            "nlu_direct_response_filter",
+            "deepleo",
+            "disable_emoji_spoken_text",
+            "responsible_ai_policy_235",
+            "enablemm",
+            "h3precise",
+            "recansgnd",
+            "dv3sugg",
+            "clgalileo"
+        ]
 
     payload = {
         "arguments": [
