@@ -192,7 +192,7 @@ async def connect_chat(event):
     pass
 
 
-async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True, request_id=None):
+async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=False, request_id=None):
     try:
         buttons = []
         await bot_chat.prepare_request(request_id)
