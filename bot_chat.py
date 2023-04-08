@@ -76,30 +76,39 @@ async def clear_session(userID):
 async def get_session(userID):
     return MESSAGE_CREDS[userID] if userID in MESSAGE_CREDS.keys() else None
 
-
-async def set_pending(userId, ws):
+async def prepare_request(uuid):
     global PENDING_REQUESTS
-    PENDING_REQUESTS[userId] = ws
+    PENDING_REQUESTS[uuid] = None
 
-
-async def cancel_request(userId):
+async def set_pending(uuid, ws):
     global PENDING_REQUESTS
-    if userId in PENDING_REQUESTS.keys():
-        ws = PENDING_REQUESTS[userId]
-        if ws.open:
-            await ws.close()
-        del PENDING_REQUESTS[userId]
+    if (await is_queued(uuid)):
+        PENDING_REQUESTS[uuid] = ws
+
+
+async def cancel_request(uuid):
+    global PENDING_REQUESTS
+    if uuid in PENDING_REQUESTS.keys():
+        if PENDING_REQUESTS[uuid]:
+            ws = PENDING_REQUESTS[uuid]
+            if ws.open:
+                await ws.close()
+        del PENDING_REQUESTS[uuid]
         return True
     return False
 
 
-async def is_pending(userId):
-    return userId in PENDING_REQUESTS.keys()
+async def is_pending(uuid):
+    return uuid in PENDING_REQUESTS.keys() and PENDING_REQUESTS[uuid]
 
 
-async def finish_request(userId):
+async def is_queued(uuid):
+    return uuid in PENDING_REQUESTS.keys() and not PENDING_REQUESTS[uuid]
+
+
+async def finish_request(uuid):
     global PENDING_REQUESTS
-    return await cancel_request(userId)
+    return await cancel_request(uuid)
 
 
 async def create_session(cookies):
@@ -126,21 +135,22 @@ async def create_session(cookies):
     return chat_session, error
 
 
-async def send_message(userID, message, cookies, style, retry_on_disconnect=True):
+async def send_message(userID, message, cookies, style, retry_on_disconnect=True, request_id=None):
     global SEMAPHORE_ITEMS
     if userID not in SEMAPHORE_ITEMS.keys():
         SEMAPHORE_ITEMS[userID] = asyncio.Semaphore(1)
     seconds = 120
-    async with SEMAPHORE_ITEMS[userID]:
-        try:
-            result = await asyncio.wait_for(_send_message(userID, message, cookies, style, retry_on_disconnect=retry_on_disconnect), timeout=seconds)
-            return result
-        except asyncio.TimeoutError:
-            raise asyncio.TimeoutError(
-                f"Function {_send_message.__name__} timed out after {seconds} seconds")
+    if (await is_queued(request_id) or not (await is_pending(request_id))):
+        async with SEMAPHORE_ITEMS[userID]:
+            try:
+                result = await asyncio.wait_for(_send_message(userID, message, cookies, style, retry_on_disconnect=retry_on_disconnect, request_id=request_id), timeout=seconds)
+                return result
+            except asyncio.TimeoutError:
+                raise asyncio.TimeoutError(
+                    f"Function {_send_message.__name__} timed out after {seconds} seconds")
 
 
-async def _send_message(userID, message, cookies, style, retry_on_disconnect=True):
+async def _send_message(userID, message, cookies, style, retry_on_disconnect=True, request_id=None):
     global MESSAGE_CREDS
     chat_session = None
     answer = None
@@ -149,7 +159,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
     try_again = False
     cards = []
     render_card = None
-    last_message_type = 0
+    last_message_type = -1
     if userID not in MESSAGE_CREDS.keys():
         chat_session, error = await create_session(cookies)
         if error:
@@ -189,12 +199,14 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                                             compress_settings={
                                                 'memLevel': 4},
                                         ), ]) as ws:
-            await set_pending(userID, ws)
+            await set_pending(request_id, ws)
             await ws.send('{"protocol":"json","version":1}')
             await ws.recv()
             await ws.send('{"type":6}')
             await ws.send(json.dumps(message_payload) + '')
             async for responses in ws:
+                if not (await is_pending(request_id)):
+                    break
                 js = json.loads(read_until_separator(responses))
                 if (
                     js['type'] == 2
@@ -286,21 +298,21 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                             del MESSAGE_CREDS[userID]
                     break
     if image_query:
-        images, error, canceled = await bot_img.generate_image(userID, response['text'], cookies)
+        images, error, canceled = await bot_img.generate_image(userID, response['text'], cookies, request_id=request_id)
         if error:
-            await finish_request(userID)
+            await finish_request(request_id)
             raise ChatHubException(error)
         if images:
-            await finish_request(userID)
+            await finish_request(request_id)
             return ResponseTypeImage(images, response['text'])
     if not answer and not update:
         if render_card:
             answer = f'[{render_card.text}]({render_card.url})'
-        if last_message_type not in [1, 2, 6, 7]:
-            await finish_request(userID)
+        if last_message_type not in [-1, 1, 2, 6, 7]:
+            await finish_request(request_id)
             raise ChatHubException(
                 f'{bot_strings.PROCESSING_ERROR_STRING}: {last_message_type}')
-    await finish_request(userID)
+    await finish_request(request_id)
     return ResponseTypeText(answer or update, cards, render_card)
 
 

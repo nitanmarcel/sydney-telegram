@@ -20,7 +20,7 @@ async def get_images(url, aiosession):
     return images
 
 
-async def generate_image(userID, query, cookies):
+async def generate_image(userID, query, cookies, request_id=None):
     global TRIES
     headers = {
         'User-Agent':
@@ -54,7 +54,7 @@ async def generate_image(userID, query, cookies):
                 async with session.get(f'https://www.bing.com/images/create/async/results/{id}?q={quote(query)}') as response:
                     if response.status == 200:
                         while not images:
-                            if not (await bot_chat.is_pending(userID)):
+                            if not (await bot_chat.is_pending(request_id)):
                                 canceled = True
                                 break
                             images = await get_images(str(response.url), session)

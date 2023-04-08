@@ -192,10 +192,11 @@ async def connect_chat(event):
     pass
 
 
-async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True):
+async def answer_builder(userId=None, chatID=None, style=None, query=None, cookies=None, can_swipe_topics=False, retry_on_timeout=True, request_id=None):
     try:
         buttons = []
-        answer = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style))
+        await bot_chat.prepare_request(request_id)
+        answer = await bot_chat.send_message(userId, query, cookies, bot_chat.Style(style), retry_on_disconnect=True, request_id=request_id)
         if isinstance(answer, bot_chat.ResponseTypeText):
             if answer.cards:
                 buttons = [Button.url(card[0], card[1])
@@ -216,7 +217,7 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
     except asyncio.TimeoutError as exc:
         if retry_on_timeout:
             with contextlib.suppress(asyncio.TimeoutError):
-                return await answer_builder(userId, chatID, style, query, cookies, can_swipe_topics, retry_on_timeout=False)
+                return await answer_builder(userId, chatID, style, query, cookies, can_swipe_topics, retry_on_timeout=False, request_id=request_id)
         return bot_strings.TIMEOUT_ERROR_STRING, None, query, False
 
 
@@ -251,9 +252,10 @@ async def message_handler_private(event):
         return
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
-            processing_message = await event.reply(bot_strings.PROCESSING_IN_PROGRESS, buttons=[Button.inline(bot_strings.PROCESSING_CANCEL, 'ws_close')])
+            request_id = str(uuid.uuid4())
+            processing_message = await event.reply(bot_strings.PROCESSING_IN_PROGRESS, buttons=[Button.inline(bot_strings.PROCESSING_CANCEL, f'ws_close_{request_id}')])
             answer, buttons, caption, is_image = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
-                                                                      cookies=user['cookies'], can_swipe_topics=True)
+                                                                      cookies=user['cookies'], can_swipe_topics=True, request_id=request_id)
             await processing_message.delete()
             if not answer:
                 return
@@ -409,7 +411,8 @@ async def answer_callback_query(event):
         if event.sender_id in GDPR_STATES.keys() and GDPR_STATES[event.sender_id] == GdprState.STATE_DELETE_DATA:
             GDPR_STATES[event.sender_id] = GdprState.STATE_PRIVACY_POLICY
             await privacy_handler(event)
-    if data == 'ws_close':
+    if data.startswith('ws_close'):
+        uid = data.split('_')[-1]
         original_message = await event.get_message()
         if message := original_message:
             if bool(message.reply_to_msg_id):
@@ -425,11 +428,11 @@ async def answer_callback_query(event):
                     if original_message.buttons and len(original_message.buttons) > 1:
                         buttons = original_message.buttons[:-1]
                     await event.edit(text=original_message.text, file=original_message.file, buttons=buttons)
-                    await bot_chat.cancel_request(event.chat_id)
+                    await bot_chat.cancel_request(uid)
             else:
                 await event.answer(bot_strings.TOPIC_EXPIRES_STRING, alert=True)
         else:
-            await bot_chat.cancel_request(event.sender_id)
+            await bot_chat.cancel_request(uid)
     await event.answer()
 
 
@@ -447,10 +450,11 @@ async def answer_inline_query(event):
             await event.answer([builder.article('Start new topic', text=bot_strings.NEW_TOPIC_CREATED_STRING, id=f'{uuid.uuid4()}_newtopic')])
         return
     INLINE_QUERIES_TEXT[event.sender_id] = {}
+    request_id = str(uuid.uuid4())[0:5]
 
     suggestions = await bot_suggestions.get_suggestions(message)
     articles = [builder.article(message, text=f'❓ __{message}__', buttons=[
-                                Button.inline(bot_strings.PROCESSING_CANCEL, 'ws_close')])]
+                                Button.inline(bot_strings.PROCESSING_CANCEL, f'ws_close_{request_id}')], id=request_id)]
 
     if suggestions:
         for suggestion in suggestions:
@@ -459,7 +463,7 @@ async def answer_inline_query(event):
                 INLINE_QUERIES_TEXT[event.sender_id].update(
                     {suggestion['id']: message})
                 articles.append(builder.article(message, text=f'❓ __{message}__', buttons=[
-                                Button.inline(bot_strings.PROCESSING_CANCEL, 'ws_close')], id=suggestion['id']))
+                                Button.inline(bot_strings.PROCESSING_CANCEL, f'ws_close_{request_id}')], id=f'{suggestion["id"]}_{request_id}'))
 
     await event.answer(articles)
 
@@ -473,8 +477,8 @@ async def handle_inline_send(event):
         return
     if event.id in INLINE_QUERIES_TEXT[event.user_id]:
         suggestions = INLINE_QUERIES_TEXT[event.user_id]
-        query = suggestions[event.id]
-    answer, buttons, caption, is_image = await answer_builder(userId=event.user_id, query=query, style=user['style'], cookies=user['cookies'])
+        query = suggestions[event.id.split('_')[0]]
+    answer, buttons, caption, is_image = await answer_builder(userId=event.user_id, query=query, style=user['style'], cookies=user['cookies'], request_id=event.id.split('_')[-1])
     if not answer:
         await client.edit_message(event.msg_id, text=bot_strings.PROCESSING_CANCELED_STRING)
         return
@@ -514,16 +518,15 @@ async def message_handler_groups(event):
     if event.reply_to_msg_id and not user['replies']:
         return
     async with client.action(event.chat_id, 'typing'):
+        request_id = str(uuid.uuid4())
         message = event.text.replace(
             f'@{bot_config.TELEGRAM_BOT_USERNAME}', '').strip()
         if not user:
-            answer, buttons, caption, is_image = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None)
-            if not answer:
-                return
+            answer, buttons, caption, is_image = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None, request_id=request_id)
             await event.edit(f'⚠️ {answer}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
             return
-        processing_message = await event.reply(bot_strings.PROCESSING_IN_PROGRESS, buttons=[Button.inline(bot_strings.PROCESSING_CANCEL, 'ws_close')])
-        answer, buttons, caption, is_image = await answer_builder(userId=event.chat_id, query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True)
+        processing_message = await event.reply(bot_strings.PROCESSING_IN_PROGRESS, buttons=[Button.inline(bot_strings.PROCESSING_CANCEL, f'ws_close_{request_id}')])
+        answer, buttons, caption, is_image = await answer_builder(userId=event.chat_id, query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True, request_id=request_id)
         await processing_message.delete()
         if not answer:
             return
