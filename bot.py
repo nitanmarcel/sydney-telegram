@@ -253,7 +253,7 @@ async def message_handler_private(event):
     if user and user['cookies']:
         async with client.action(event.chat_id, 'typing'):
             request_id = str(uuid.uuid4())
-            processing_message = await event.reply(bot_strings.PROCESSING_IN_PROGRESS, buttons=[Button.inline(bot_strings.PROCESSING_CANCEL, f'ws_close_{request_id}')])
+            processing_message = await event.reply(bot_strings.PROCESSING_IN_PROGRESS, buttons=[Button.inline(bot_strings.PROCESSING_CANCEL, f'wsclose_{request_id}')])
             answer, buttons, caption, is_image = await answer_builder(userId=event.sender_id, query=message, style=user['style'],
                                                                       cookies=user['cookies'], can_swipe_topics=True, request_id=request_id)
             await processing_message.delete()
@@ -411,7 +411,7 @@ async def answer_callback_query(event):
         if event.sender_id in GDPR_STATES.keys() and GDPR_STATES[event.sender_id] == GdprState.STATE_DELETE_DATA:
             GDPR_STATES[event.sender_id] = GdprState.STATE_PRIVACY_POLICY
             await privacy_handler(event)
-    if data.startswith('ws_close'):
+    if data.startswith('wsclose'):
         uid = data.split('_')[-1]
         original_message = await event.get_message()
         if message := original_message:
@@ -432,7 +432,13 @@ async def answer_callback_query(event):
             else:
                 await event.answer(bot_strings.TOPIC_EXPIRES_STRING, alert=True)
         else:
-            await bot_chat.cancel_request(uid)
+            if len(data.split('_'))  == 3:
+                if int(data.split('_')[1]) == event.sender_id:
+                    await bot_chat.cancel_request(uid)
+                else:
+                    await event.answer(bot_strings.TOPIC_EXPIRES_STRING, alert=True)
+            else:
+                await event.answer(bot_strings.TOPIC_EXPIRES_STRING, alert=True)
     await event.answer()
 
 
@@ -454,7 +460,7 @@ async def answer_inline_query(event):
 
     suggestions = await bot_suggestions.get_suggestions(message)
     articles = [builder.article(message, text=f'❓ __{message}__', buttons=[
-                                Button.inline(bot_strings.PROCESSING_CANCEL, f'ws_close_{request_id}')], id=request_id)]
+                                Button.inline(bot_strings.PROCESSING_CANCEL, f'wsclose_{event.sender_id}_{request_id}')], id=request_id)]
 
     if suggestions:
         for suggestion in suggestions:
@@ -463,7 +469,7 @@ async def answer_inline_query(event):
                 INLINE_QUERIES_TEXT[event.sender_id].update(
                     {suggestion['id']: message})
                 articles.append(builder.article(message, text=f'❓ __{message}__', buttons=[
-                                Button.inline(bot_strings.PROCESSING_CANCEL, f'ws_close_{request_id}')], id=f'{suggestion["id"]}_{request_id}'))
+                                Button.inline(bot_strings.PROCESSING_CANCEL, f'wsclose_{request_id}')], id=f'{suggestion["id"]}_{request_id}'))
 
     await event.answer(articles)
 
@@ -525,7 +531,7 @@ async def message_handler_groups(event):
             answer, buttons, caption, is_image = await answer_builder(userId=None, query=message, style=bot_chat.Style.BALANCED, cookies=None, request_id=request_id)
             await event.edit(f'⚠️ {answer}', buttons=[Button.url('Log in', url=f'http://t.me/{bot_config.TELEGRAM_BOT_USERNAME}?start=help')])
             return
-        processing_message = await event.reply(bot_strings.PROCESSING_IN_PROGRESS, buttons=[Button.inline(bot_strings.PROCESSING_CANCEL, f'ws_close_{request_id}')])
+        processing_message = await event.reply(bot_strings.PROCESSING_IN_PROGRESS, buttons=[Button.inline(bot_strings.PROCESSING_CANCEL, f'wsclose_{request_id}')])
         answer, buttons, caption, is_image = await answer_builder(userId=event.chat_id, query=message, style=user['style'], cookies=user['cookies'] if user else None, can_swipe_topics=True, request_id=request_id)
         await processing_message.delete()
         if not answer:
