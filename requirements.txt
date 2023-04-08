@@ -1,6 +1,7 @@
-telethon
-aiohttp
-gino
-python-dateutil
-uvloop
-cryptg
+telethon==1.28.2
+aiohttp==3.8.4
+gino==1.0.1
+python-dateutil==2.8.2
+uvloop==0.17.0
+cryptg==0.4.0
+websockets==10.4
