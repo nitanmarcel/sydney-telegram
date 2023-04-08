@@ -178,7 +178,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
             chat_session['conversationExpiryTime'].timestamp() < datetime.utcnow().timestamp() or
             chat_session['numRemainingUserMessagesInConversation'] == 0
         ):
-            return await send_message(userID, message, cookies, style)
+            return await send_message(userID, message, cookies, style, retry_on_disconnect=retry_on_disconnect, request_id=request_id)
         chat_session['isStartOfSession'] = False
         if chat_session['invocationId'] >= 8:
             chat_session['invocationId'] = 0
@@ -230,7 +230,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                 else:
                     break
     if try_again:
-        return await send_message(userID=userID, message=message, cookies=cookies, style=style, retry_on_disconnect=False)
+        return await send_message(userID=userID, message=message, cookies=cookies, style=style, retry_on_disconnect=False, request_id=request_id)
     if ws_messages:
         for responses in ws_messages:
             if responses['type'] == 1 and 'arguments' in responses.keys():
