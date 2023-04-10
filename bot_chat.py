@@ -178,6 +178,7 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
             chat_session['conversationExpiryTime'].timestamp() < datetime.utcnow().timestamp() or
             chat_session['numRemainingUserMessagesInConversation'] == 0
         ):
+            del MESSAGE_CREDS[userID]
             return await send_message(userID, message, cookies, style, retry_on_disconnect=retry_on_disconnect, request_id=request_id)
         chat_session['isStartOfSession'] = False
         if chat_session['invocationId'] >= 8:
