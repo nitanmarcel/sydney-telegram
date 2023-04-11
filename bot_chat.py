@@ -5,7 +5,7 @@ import re
 import uuid
 import urllib.parse
 import contextlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.parser import parse as dateparse
 from dataclasses import dataclass
 from enum import Enum
@@ -167,24 +167,22 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
         chat_session['isStartOfSession'] = True
         chat_session['style'] = style
         chat_session['invocationId'] = 0
-        chat_session['conversationExpiryTime'] = None
+        chat_session['conversationExpiryTime'] = datetime.utcnow() + timedelta(hours=4)
         chat_session['numRemainingUserMessagesInConversation'] = None
 
         MESSAGE_CREDS[userID] = chat_session
     else:
         chat_session = MESSAGE_CREDS[userID]
-        if chat_session['style'] != style or (
-            chat_session['conversationExpiryTime'] and
-            chat_session['conversationExpiryTime'].timestamp() < datetime.utcnow().timestamp() or
-            chat_session['numRemainingUserMessagesInConversation'] == 0
-        ):
+        if chat_session['style'] != style:
+            del MESSAGE_CREDS[userID]
+            return await send_message(userID, message, cookies, style, retry_on_disconnect=retry_on_disconnect, request_id=request_id)
+        if chat_session['conversationExpiryTime'].timestamp() < datetime.utcnow().timestamp():
+            del MESSAGE_CREDS[userID]
+            return await send_message(userID, message, cookies, style, retry_on_disconnect=retry_on_disconnect, request_id=request_id)
+        if chat_session['numRemainingUserMessagesInConversation'] == 0:
             del MESSAGE_CREDS[userID]
             return await send_message(userID, message, cookies, style, retry_on_disconnect=retry_on_disconnect, request_id=request_id)
         chat_session['isStartOfSession'] = False
-        if chat_session['invocationId'] >= 8:
-            chat_session['invocationId'] = 0
-        else:
-            chat_session['invocationId'] += 1
 
     chat_session['question'] = message
 
@@ -264,10 +262,10 @@ async def _send_message(userID, message, cookies, style, retry_on_disconnect=Tru
                         raise ChatHubException(
                             item['result']['error']['message'])
                 if 'messages' in item.keys():
-                    if 'conversationExpiryTime' in item.keys():
+                    if 'conversationExpiryTime' in item.keys() and item['conversationExpiryTime']:
                         chat_session['conversationExpiryTime'] = dateparse(
                             item['conversationExpiryTime'])
-                    if 'throttling' in item.keys() and 'messages' in item.keys():  # numRemainingUserMessagesInConversation
+                    if 'throttling' in item.keys() and 'messages' in item.keys(): 
                         if 'throttling' in responses['item']:
                             chat_session['numRemainingUserMessagesInConversation'] = responses['item']['throttling'][
                                 'maxNumUserMessagesInConversation'] - responses['item']['throttling']['numUserMessagesInConversation']
@@ -416,7 +414,7 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
                 "conversationId": conversationId,
             }
         ],
-        "invocationId": '2',  # f'{invocationId}',
+        "invocationId": f'{invocationId}',
         "target": "chat",
         "type": 4
     }
