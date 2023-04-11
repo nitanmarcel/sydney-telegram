@@ -206,19 +206,25 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
                 if answer.render_card:
                     buttons.append(
                         [Button.url('Read More', answer.render_card.url)])
-            if can_swipe_topics:
-                buttons.append(
-                    [Button.inline(text='New Topic', data='newtopic')])
+        if can_swipe_topics:
+            buttons.append(
+                [Button.inline(text='New Topic', data='newtopic')])
             return answer.answer, buttons or None, query, False
         if isinstance(answer, bot_chat.ResponseTypeImage):
-            return answer.images, None, answer.caption, True
+            return answer.images, buttons or None, answer.caption, True
     except bot_chat.ChatHubException as exc:
-        return str(exc), [Button.inline(text='New Topic', data='newtopic')], query, False
+        if can_swipe_topics:
+            buttons.append(
+                [Button.inline(text='New Topic', data='newtopic')])
+        return str(exc), buttons or None, query, False
     except asyncio.TimeoutError as exc:
+        if can_swipe_topics:
+            buttons.append(
+                [Button.inline(text='New Topic', data='newtopic')])
         if retry_on_timeout:
             with contextlib.suppress(asyncio.TimeoutError):
                 return await answer_builder(userId, chatID, style, query, cookies, can_swipe_topics, retry_on_timeout=False, request_id=request_id)
-        return bot_strings.TIMEOUT_ERROR_STRING, None, query, False
+        return bot_strings.TIMEOUT_ERROR_STRING, buttons or None, query, False
 
 
 @client.on(events.NewMessage(outgoing=False, incoming=True, func=lambda e: e.is_private and not e.via_bot_id))
