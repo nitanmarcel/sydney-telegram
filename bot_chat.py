@@ -54,6 +54,8 @@ class Style(Enum):
     CREATIVE = 1
     BALANCED = 2
     PRECISE = 3
+    def __str__(self) -> str:
+        return self.name.lower().title()
 
 
 def read_until_separator(message):
@@ -384,11 +386,14 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
                 "source": "cib",
                 "optionsSets": optionsSets,
                 "allowedMessageTypes": [
+                    "ActionRequest",
                     "Chat",
+                    "Context",
                     "InternalSearchQuery",
                     "InternalSearchResult",
                     "Disengaged",
                     "InternalLoaderMessage",
+                    "Progress",
                     "RenderCardRequest",
                     "AdsQuery",
                     "SemanticSerp",
@@ -396,16 +401,27 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
                     "SearchQuery"
                 ],
                 "sliceIds": [
-                    "321bic62",
-                    "styleqnatg",
-                    "sydpaycontrol",
-                    "toneexpcf",
-                    "327telmet",
-                    "325content",
-                    "303hubcancls0",
-                    "326locnwspcs0",
-                    "323glpromptv3",
-                    "316e2ecache"
+                    "winmuid1tf",
+                    "anssupltmr2",
+                    "rankcf",
+                    "production",
+                    "tts2",
+                    "voicelang2",
+                    "anssupfo2",
+                    "revpayaad",
+                    "winlongmsg2tf",
+                    "sydtransl",
+                    "606rai271",
+                    "602refusal",
+                    "0510wow",
+                    "wowcds",
+                    "516ajcome",
+                    "621docxfmtho",
+                    "threadstitle",
+                    "615scss0",
+                    "tempcacheread",
+                    "temptacache",
+                    "619dagslnv1nr"
                 ],
                 "verbosity": "verbose",
                 "traceId": str(traceID),
@@ -423,10 +439,12 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
                     "text": question,
                     "messageType": "Chat"
                 },
+                "tone": str(style),
                 "conversationSignature": conversationSignature,
                 "participant": {
                     "id": clientID
                 },
+                "spokenTextMode": "None",
                 "conversationId": conversationId,
             }
         ],
