@@ -326,42 +326,58 @@ async def build_message(question, clientID, traceID, conversationId, conversatio
         "disable_emoji_spoken_text",
         "responsible_ai_policy_235",
         "enablemm",
-        "galileo",
-        "recansgnd",
+        "weanow",
+        "uquopt",
+        "rai271",
+        "refpromptv1",
+        "smartname",
+        "mvcargnd",
+        "dagslnv1nr",
         "dv3sugg",
-        "cachewriteext",
-        "e2ecachewrite",
-        "nodlcpcwrite",
-        "nointernalsugg",
-        "dlwebtrunc",
-        "glpromptv3plus"
-    ]
+        "autosave",
+        "galileo",
+        "saharagenconv5"
+      ]
     if style == Style.CREATIVE:
         optionsSets = [
-            "nlu_direct_response_filter",
-            "deepleo",
-            "disable_emoji_spoken_text",
-            "responsible_ai_policy_235",
-            "enablemm",
-            "h3imaginative",
-            "recansgnd",
-            "dv3sugg",
-            "clgalileo",
-            "gencontentv3"
-        ]
+        "nlu_direct_response_filter",
+        "deepleo",
+        "disable_emoji_spoken_text",
+        "responsible_ai_policy_235",
+        "enablemm",
+        "weanow",
+        "uquopt",
+        "rai271",
+        "refpromptv1",
+        "smartname",
+        "mvcargnd",
+        "dagslnv1nr",
+        "dv3sugg",
+        "autosave",
+        "h3imaginative",
+        "clgalileo",
+        "gencontentv3"
+      ]
     if style == Style.PRECISE:
         optionsSets = [
-            "nlu_direct_response_filter",
-            "deepleo",
-            "disable_emoji_spoken_text",
-            "responsible_ai_policy_235",
-            "enablemm",
-            "h3precise",
-            "recansgnd",
-            "dv3sugg",
-            "clgalileo"
-        ]
-
+        "nlu_direct_response_filter",
+        "deepleo",
+        "disable_emoji_spoken_text",
+        "responsible_ai_policy_235",
+        "enablemm",
+        "weanow",
+        "uquopt",
+        "rai271",
+        "refpromptv1",
+        "smartname",
+        "mvcargnd",
+        "dagslnv1nr",
+        "dv3sugg",
+        "autosave",
+        "h3precise",
+        "clgalileo",
+        "gencontentv3"
+      ]
     payload = {
         "arguments": [
             {
