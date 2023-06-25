@@ -209,9 +209,9 @@ async def answer_builder(userId=None, chatID=None, style=None, query=None, cooki
         if can_swipe_topics:
             buttons.append(
                 [Button.inline(text='New Topic', data='newtopic')])
-        return answer.answer, buttons or None, query, False
         if isinstance(answer, bot_chat.ResponseTypeImage):
             return answer.images, buttons or None, answer.caption, True
+        return answer.answer, buttons or None, query, False
     except bot_chat.ChatHubException as exc:
         if can_swipe_topics:
             buttons.append(
